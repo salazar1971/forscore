@@ -34,6 +34,7 @@
   .brand{display:flex;align-items:baseline;gap:14px;}
   .brand h1{font-size:clamp(19px,1.8vw,30px);font-weight:700;margin:0;letter-spacing:-0.02em;}
   .brand .sub{color:var(--muted);font-size:clamp(12px,1vw,15px);}
+  .brand .ver{color:#c9ccd2;font-size:10px;font-variant-numeric:tabular-nums;}
   .clock{text-align:right;line-height:1.15;}
   .clock .time{font-size:clamp(19px,1.8vw,29px);font-weight:700;font-variant-numeric:tabular-nums;}
   .clock .date{color:var(--muted);font-size:clamp(11px,0.9vw,14px);text-transform:capitalize;}
@@ -137,6 +138,7 @@
   <div class="brand">
     <h1>Progreso Semanal · forScore</h1>
     <span class="sub">Tablero de mandos</span>
+    <span class="ver">v8</span>
   </div>
   <div class="clock">
     <div class="time" id="clock-time">--:--</div>
@@ -150,7 +152,7 @@
   <section class="cal">
     <div class="cal-head">
       <h2 id="cal-month">—</h2>
-      <span class="tag">Calendario Casa</span>
+      <span class="tag" id="cal-tag">Calendario Casa</span>
     </div>
     <div class="dow" id="cal-dow"></div>
     <div class="grid" id="cal-grid"></div>
@@ -272,6 +274,12 @@ function renderCalendar(){
 
   document.getElementById("cal-month").innerHTML=`${MESES[m-1]} <span class="yr">de ${y}</span>`;
 
+  /* cuántas citas hay cargadas de este mes (ayuda a saber si el Atajo las envió) */
+  const prefijo=`${y}-${pad2(m)}`;
+  const nDelMes=EVENTS.filter(e=>String(e.d||"").startsWith(prefijo)).length;
+  document.getElementById("cal-tag").textContent=
+    `Calendario Casa · ${nDelMes} ${nDelMes===1?"cita":"citas"}`;
+
   /* cabecera de días (lunes a domingo) */
   document.getElementById("cal-dow").innerHTML =
     DOW.map((d,i)=>`<span class="${i>=5?"we":""}">${d}</span>`).join("");
@@ -343,11 +351,14 @@ function handleHash(){
   if(!raw) return;
   let cambiado=false;
 
-  raw.split("&").forEach(chunk=>{
-    const i=chunk.indexOf("=");
-    if(i<0) return;
-    const clave=chunk.slice(0,i).toLowerCase();
-    const valor=safeDecode(chunk.slice(i+1));
+  /* separa solo por "&add=" o "&cal=", así un "&" dentro del título de una cita no rompe nada */
+  const trozos=[];
+  const re=/(?:^|&)(add|cal)=([\s\S]*?)(?=&(?:add|cal)=|$)/gi;
+  let mm;
+  while((mm=re.exec(raw))!==null) trozos.push([mm[1].toLowerCase(), mm[2]]);
+
+  trozos.forEach(([clave,crudo])=>{
+    const valor=safeDecode(crudo);
 
     if(clave==="add"){
       const p=valor.split(",").map(s=>s.trim());
