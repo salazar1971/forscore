@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>Progreso · forScore</title>
+<title>Progreso Semanal · forScore</title>
 <style>
   :root{
     color-scheme: light;
@@ -16,38 +16,65 @@
     --secondary:  #4b5563;
     --muted:      #8a8f98;
     --border:     #e6e7eb;
-    /* un color por meta */
-    --m-ensayo:   #1a7f4b;  /* verde oscuro */
-    --m-estudio:  #43c46f;  /* verde claro  */
-    --m-acordeon: #2a78d6;  /* azul         */
-    --m-guitarra: #e0752e;  /* naranja      */
+    --m-ensayo:   #1a7f4b;
+    --m-estudio:  #43c46f;
+    --m-acordeon: #2a78d6;
+    --m-guitarra: #e0752e;
+    --hoy:        #d03b3b;
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);}
-  body{min-height:100vh;padding:clamp(18px,2.4vw,44px);}
+  body{min-height:100vh;padding:clamp(16px,2vw,38px);}
 
-  header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:clamp(18px,2.2vw,36px);}
+  header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:clamp(14px,1.8vw,28px);}
   .brand{display:flex;align-items:baseline;gap:14px;}
-  .brand h1{font-size:clamp(21px,2vw,32px);font-weight:700;margin:0;letter-spacing:-0.02em;}
+  .brand h1{font-size:clamp(20px,1.9vw,31px);font-weight:700;margin:0;letter-spacing:-0.02em;}
   .brand .sub{color:var(--muted);font-size:clamp(12px,1vw,15px);}
   .clock{text-align:right;line-height:1.15;}
-  .clock .time{font-size:clamp(20px,2vw,30px);font-weight:700;font-variant-numeric:tabular-nums;}
+  .clock .time{font-size:clamp(20px,1.9vw,30px);font-weight:700;font-variant-numeric:tabular-nums;}
   .clock .date{color:var(--muted);font-size:clamp(11px,0.9vw,14px);text-transform:capitalize;}
 
-  .rings{display:flex;flex-direction:column;align-items:center;gap:clamp(14px,1.4vw,26px);}
-  .rings-row{display:flex;justify-content:center;flex-wrap:wrap;gap:clamp(14px,1.4vw,26px);width:100%;}
-  .card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:clamp(18px,1.6vw,28px);
-        width:clamp(220px,22vw,300px);
-        display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(17,19,24,0.05);}
-  .period-chip{font-size:10px;letter-spacing:0.09em;text-transform:uppercase;color:var(--muted);background:var(--card-2);border-radius:999px;padding:4px 11px;}
-  .ring-wrap{position:relative;width:clamp(140px,11vw,190px);aspect-ratio:1;}
+  /* ---- layout de dos columnas ---- */
+  .layout{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,0.85fr);gap:clamp(14px,1.6vw,30px);align-items:start;}
+  @media (max-width:900px){ .layout{grid-template-columns:1fr;} }
+
+  /* ---- anillos ---- */
+  .rings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(12px,1.3vw,24px);}
+  @media (max-width:520px){ .rings{grid-template-columns:1fr;} }
+  .card{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:clamp(14px,1.5vw,26px);
+        display:flex;flex-direction:column;align-items:center;gap:11px;box-shadow:0 1px 3px rgba(17,19,24,0.05);}
+  .ring-wrap{position:relative;width:clamp(130px,10.5vw,182px);aspect-ratio:1;}
   .ring-wrap svg{width:100%;height:100%;transform:rotate(-90deg);}
   .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;}
-  .ring-center .val{font-size:clamp(19px,1.6vw,26px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
-  .ring-center .pct{font-size:clamp(12px,0.95vw,14px);color:var(--muted);font-variant-numeric:tabular-nums;}
-  .meta-name{font-size:clamp(15px,1.2vw,18px);font-weight:700;text-align:center;}
-  .meta-sub{font-size:clamp(12px,0.9vw,14px);color:var(--secondary);text-align:center;}
+  .ring-center .val{font-size:clamp(18px,1.5vw,25px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+  .ring-center .pct{font-size:clamp(11px,0.9vw,14px);color:var(--muted);font-variant-numeric:tabular-nums;}
+  .meta-name{font-size:clamp(14px,1.1vw,18px);font-weight:700;text-align:center;}
+  .meta-sub{font-size:clamp(11px,0.85vw,14px);color:var(--secondary);text-align:center;}
+
+  /* ---- agenda ---- */
+  .agenda{background:var(--card);border:1px solid var(--border);border-radius:22px;
+          padding:clamp(16px,1.5vw,26px);box-shadow:0 1px 3px rgba(17,19,24,0.05);
+          display:flex;flex-direction:column;max-height:calc(100vh - clamp(120px,12vw,210px));}
+  .agenda h2{margin:0 0 2px;font-size:clamp(16px,1.3vw,21px);font-weight:700;letter-spacing:-0.01em;}
+  .agenda h2 .yr{color:var(--muted);font-weight:400;}
+  .agenda .cal-name{font-size:11px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;}
+  .agenda .list{overflow-y:auto;margin:0 -6px;padding:0 6px;}
+  .day{display:grid;grid-template-columns:44px 1fr;gap:12px;padding:9px 0;border-top:1px solid var(--border);}
+  .day:first-child{border-top:0;}
+  .day.past{opacity:0.45;}
+  .day-num{text-align:center;line-height:1.05;padding-top:1px;}
+  .day-num .n{font-size:clamp(16px,1.2vw,20px);font-weight:700;font-variant-numeric:tabular-nums;display:block;}
+  .day-num .w{font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);}
+  .day.today .day-num .n{background:var(--hoy);color:#fff;border-radius:999px;width:29px;height:29px;
+                          display:flex;align-items:center;justify-content:center;margin:0 auto;}
+  .day.today .day-num .w{color:var(--hoy);}
+  .ev{display:flex;align-items:baseline;gap:9px;padding:2px 0;}
+  .ev .bar{width:3px;align-self:stretch;min-height:15px;border-radius:2px;background:var(--m-acordeon);flex:none;}
+  .ev .t{font-size:clamp(12px,0.95vw,14.5px);font-variant-numeric:tabular-nums;color:var(--muted);min-width:38px;flex:none;}
+  .ev .n{font-size:clamp(12.5px,1vw,15px);color:var(--text);}
+  .ev.allday .t{font-size:10px;text-transform:uppercase;letter-spacing:0.04em;}
+  .agenda .empty{color:var(--muted);font-size:13px;padding:22px 2px;text-align:center;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -62,34 +89,63 @@
   </div>
 </header>
 
-<section class="rings" id="rings"></section>
+<div class="layout">
+  <section class="rings" id="rings"></section>
+
+  <aside class="agenda">
+    <h2 id="cal-month">—</h2>
+    <div class="cal-name">Calendario Casa</div>
+    <div class="list" id="cal-list"></div>
+  </aside>
+</div>
 
 <script>
 "use strict";
 
+/* ================= METAS ================= */
 const GOALS = [
-  {id:"ensayo",   name:"PIANO · Ensayo",  row:1, target:3*3600, color:"var(--m-ensayo)"},
-  {id:"estudio",  name:"PIANO · Estudio", row:1, target:3*3600, color:"var(--m-estudio)"},
-  {id:"acordeon", name:"ACORDEÓN",        row:2, target:3*3600, color:"var(--m-acordeon)"},
-  {id:"guitarra", name:"GUITARRA",        row:2, target:3*3600, color:"var(--m-guitarra)"},
+  {id:"ensayo",   name:"PIANO · Ensayo",  target:3*3600, color:"var(--m-ensayo)"},
+  {id:"estudio",  name:"PIANO · Estudio", target:3*3600, color:"var(--m-estudio)"},
+  {id:"acordeon", name:"ACORDEÓN",        target:3*3600, color:"var(--m-acordeon)"},
+  {id:"guitarra", name:"GUITARRA",        target:3*3600, color:"var(--m-guitarra)"},
 ];
 
-/* datos iniciales (captura del 14/08/2026) */
 const SEED = [
   {date:"2026-08-14", ensayo:1*3600+31*60+46, estudio:2*3600+15*60+7, acordeon:37*60+36, guitarra:50*60+1}
 ];
+
+/* citas de ejemplo (calendario Casa, agosto 2026) hasta que las envíe el Atajo */
+const SEED_EVENTS = [
+  {d:"2026-08-10", t:"21:00", n:"Práctica Debussy"},
+  {d:"2026-08-11", t:"13:00", n:"Práctica Turina 6"},
+  {d:"2026-08-11", t:"21:00", n:"Práctica Debussy"},
+  {d:"2026-08-12", t:"21:00", n:"Práctica Debussy"},
+  {d:"2026-08-14", t:"21:00", n:"Práctica Debussy"},
+  {d:"2026-08-16", t:"21:00", n:"Práctica Debussy"},
+  {d:"2026-08-18", t:"13:00", n:"Práctica Turina 7"},
+  {d:"2026-08-18", t:"21:00", n:"Práctica Debussy"},
+  {d:"2026-08-19", t:"13:00", n:"Práctica Turina 8"},
+  {d:"2026-08-20", t:"13:00", n:"Práctica Turina 9"},
+  {d:"2026-08-21", t:"18:00", n:"Farmacia"},
+  {d:"2026-08-25", t:"21:00", n:"Práctica Debussy"},
+  {d:"2026-08-26", t:"21:00", n:"Práctica Debussy"},
+  {d:"2026-08-27", t:"21:00", n:"Práctica Debussy"},
+];
+
 const STORE_KEY = "forscore_progress_v3";
+const CAL_KEY   = "forscore_cal_v1";
 
-let memFallback = null;
-function loadData(){
-  try{ const raw = localStorage.getItem(STORE_KEY); if(raw) return JSON.parse(raw); }
-  catch(e){ if(memFallback) return memFallback; }
-  return JSON.parse(JSON.stringify(SEED));
+/* ================= almacenamiento ================= */
+function load(key, fallback){
+  try{ const raw=localStorage.getItem(key); if(raw) return JSON.parse(raw); }catch(e){}
+  return JSON.parse(JSON.stringify(fallback));
 }
-function saveData(d){ memFallback=d; try{ localStorage.setItem(STORE_KEY, JSON.stringify(d)); }catch(e){} }
-let DATA = loadData();
+function save(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
 
-/* utilidades de tiempo */
+let DATA   = load(STORE_KEY, SEED);
+let EVENTS = load(CAL_KEY,   SEED_EVENTS);
+
+/* ================= tiempo ================= */
 function parseTime(str){
   if(str==null) return null; str=String(str).trim(); if(str==="") return null;
   if(/^\d+$/.test(str)) return parseInt(str,10);
@@ -109,62 +165,154 @@ function fmtTarget(sec){
   if(sec%60===0)   return (sec/60)+" min";
   return fmtTime(sec);
 }
+function todayISO(){
+  const t=new Date(), p=n=>String(n).padStart(2,"0");
+  return `${t.getFullYear()}-${p(t.getMonth()+1)}-${p(t.getDate())}`;
+}
 
+/* ================= anillos ================= */
 function latestEntry(){ return DATA.length ? DATA.slice().sort((a,b)=>a.date<b.date?1:-1)[0] : null; }
 
-function cardHTML(g,cur){
-  const val=cur?(cur[g.id]??0):0;
-  const pct=g.target>0?val/g.target:0;
-  const pctC=Math.max(0,Math.min(1,pct));
-  const R=54, C=2*Math.PI*R, off=C*(1-pctC);
-  const card=document.createElement("div"); card.className="card";
-  card.innerHTML=`
-    <div class="ring-wrap">
-      <svg viewBox="0 0 120 120">
-        <circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--track)" stroke-width="11"/>
-        <circle cx="60" cy="60" r="${R}" fill="none" stroke="${g.color}" stroke-width="11"
-          stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
-      </svg>
-      <div class="ring-center">
-        <span class="val">${fmtTime(val)}</span>
-        <span class="pct">${Math.round(pct*100)}%</span>
-      </div>
-    </div>
-    <div class="meta-name">${g.name}</div>
-    <div class="meta-sub">Objetivo ${fmtTarget(g.target)}</div>`;
-  return card;
-}
 function renderRings(){
   const wrap=document.getElementById("rings"); const cur=latestEntry(); wrap.innerHTML="";
-  const rows=[...new Set(GOALS.map(g=>g.row))].sort();
-  rows.forEach(r=>{
-    const rowEl=document.createElement("div"); rowEl.className="rings-row";
-    GOALS.filter(g=>g.row===r).forEach(g=>rowEl.appendChild(cardHTML(g,cur)));
-    wrap.appendChild(rowEl);
+  GOALS.forEach(g=>{
+    const val=cur?(cur[g.id]??0):0;
+    const pct=g.target>0?val/g.target:0;
+    const pctC=Math.max(0,Math.min(1,pct));
+    const R=54, C=2*Math.PI*R, off=C*(1-pctC);
+    const card=document.createElement("div"); card.className="card";
+    card.innerHTML=`
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--track)" stroke-width="11"/>
+          <circle cx="60" cy="60" r="${R}" fill="none" stroke="${g.color}" stroke-width="11"
+            stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
+        </svg>
+        <div class="ring-center">
+          <span class="val">${fmtTime(val)}</span>
+          <span class="pct">${Math.round(pct*100)}%</span>
+        </div>
+      </div>
+      <div class="meta-name">${g.name}</div>
+      <div class="meta-sub">Objetivo ${fmtTarget(g.target)}</div>`;
+    wrap.appendChild(card);
   });
 }
 
-/* inyección por URL para el futuro Atajo: #add=FECHA,ensayo,estudio,acordeon,guitarra */
+/* ================= agenda del mes ================= */
+const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const DIAS=["dom","lun","mar","mié","jue","vie","sáb"];
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function renderAgenda(){
+  const now=new Date();
+  const y=now.getFullYear(), m=now.getMonth()+1;
+  const pad=n=>String(n).padStart(2,"0");
+  const prefix=`${y}-${pad(m)}`;
+  const hoy=todayISO();
+
+  document.getElementById("cal-month").innerHTML=
+    `${MESES[m-1]} <span class="yr">de ${y}</span>`;
+
+  const list=document.getElementById("cal-list");
+  const mes=EVENTS.filter(e=>String(e.d||"").startsWith(prefix));
+  list.innerHTML="";
+
+  if(!mes.length){
+    list.innerHTML=`<div class="empty">Sin citas de este mes.<br>Ejecuta el atajo para traerlas del calendario Casa.</div>`;
+    return;
+  }
+
+  /* agrupar por día */
+  const porDia={};
+  mes.forEach(e=>{ (porDia[e.d]=porDia[e.d]||[]).push(e); });
+
+  Object.keys(porDia).sort().forEach(d=>{
+    const evs=porDia[d].slice().sort((a,b)=>String(a.t||"").localeCompare(String(b.t||"")));
+    const [yy,mm,dd]=d.split("-").map(Number);
+    const fecha=new Date(yy,mm-1,dd);
+    const row=document.createElement("div");
+    row.className="day"+(d===hoy?" today":"")+(d<hoy?" past":"");
+    row.innerHTML=
+      `<div class="day-num"><span class="n">${dd}</span><span class="w">${DIAS[fecha.getDay()]}</span></div>
+       <div>`+evs.map(e=>{
+         const allday=!e.t;
+         return `<div class="ev${allday?" allday":""}">
+                   <span class="bar"></span>
+                   <span class="t">${allday?"Todo el día":esc(e.t)}</span>
+                   <span class="n">${esc(e.n||"")}</span>
+                 </div>`;
+       }).join("")+`</div>`;
+    list.appendChild(row);
+  });
+}
+
+/* ================= entrada de datos por URL =================
+   Tiempos:  #add=FECHA,ensayo,estudio,acordeon,guitarra
+   Citas:    #cal=YYYY-MM-DD|HH:mm|Título;YYYY-MM-DD|HH:mm|Título;...
+             (deja la hora vacía para eventos de todo el día)
+   Se pueden combinar:  #add=...&cal=...
+========================================================== */
+function safeDecode(s){ try{ return decodeURIComponent(s.replace(/\+/g," ")); }catch(e){ return s; } }
+
 function handleHash(){
-  const h=location.hash; if(!h.startsWith("#add=")) return;
-  const parts=decodeURIComponent(h.slice(5)).split(",").map(s=>s.trim());
-  const entry={date:parts[0]||new Date().toISOString().slice(0,10)};
-  GOALS.forEach((g,i)=>{const v=parseTime(parts[i+1]); if(v!=null) entry[g.id]=v;});
-  const idx=DATA.findIndex(e=>e.date===entry.date);
-  if(idx>=0) DATA[idx]=Object.assign({},DATA[idx],entry); else DATA.push(entry);
-  saveData(DATA); history.replaceState(null,"",location.pathname+location.search); renderRings();
+  const raw=location.hash.replace(/^#/,"");
+  if(!raw) return;
+  let cambiado=false;
+
+  raw.split("&").forEach(chunk=>{
+    const i=chunk.indexOf("=");
+    if(i<0) return;
+    const clave=chunk.slice(0,i).toLowerCase();
+    const valor=safeDecode(chunk.slice(i+1));
+
+    if(clave==="add"){
+      const p=valor.split(",").map(s=>s.trim());
+      const entry={date:p[0]||todayISO()};
+      GOALS.forEach((g,k)=>{ const v=parseTime(p[k+1]); if(v!=null) entry[g.id]=v; });
+      const idx=DATA.findIndex(e=>e.date===entry.date);
+      if(idx>=0) DATA[idx]=Object.assign({},DATA[idx],entry); else DATA.push(entry);
+      save(STORE_KEY,DATA); cambiado=true;
+    }
+
+    if(clave==="cal"){
+      const nuevos=[];
+      valor.split(";").forEach(item=>{
+        item=item.trim(); if(!item) return;
+        const f=item.split("|");
+        const d=(f[0]||"").trim();
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+        nuevos.push({d, t:(f[1]||"").trim(), n:(f.slice(2).join("|")||"").trim()});
+      });
+      /* sustituye las citas de los meses recibidos, conserva el resto */
+      const meses=new Set(nuevos.map(e=>e.d.slice(0,7)));
+      EVENTS=EVENTS.filter(e=>!meses.has(String(e.d||"").slice(0,7))).concat(nuevos);
+      save(CAL_KEY,EVENTS); cambiado=true;
+    }
+  });
+
+  history.replaceState(null,"",location.pathname+location.search);
+  if(cambiado){ renderRings(); renderAgenda(); }
 }
 
+/* ================= reloj ================= */
 function tickClock(){
-  const t=new Date(); const p=n=>String(n).padStart(2,"0");
+  const t=new Date(), p=n=>String(n).padStart(2,"0");
   document.getElementById("clock-time").textContent=`${p(t.getHours())}:${p(t.getMinutes())}`;
-  document.getElementById("clock-date").textContent=t.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"});
+  document.getElementById("clock-date").textContent=
+    t.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"});
 }
 
+/* ================= init ================= */
 handleHash();
 window.addEventListener("hashchange",handleHash);
 renderRings();
+renderAgenda();
 tickClock(); setInterval(tickClock,15000);
+/* al cambiar de mes/día, refresca la agenda sin recargar */
+let ultimoDia=todayISO();
+setInterval(()=>{ if(todayISO()!==ultimoDia){ ultimoDia=todayISO(); renderAgenda(); } },60000);
 </script>
 </body>
 </html>
