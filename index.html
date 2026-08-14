@@ -40,7 +40,9 @@
 
   /* ---- dos columnas: anillos | calendario ---- */
   .layout{display:grid;grid-template-columns:minmax(0,0.78fr) minmax(0,1.22fr);gap:clamp(14px,1.5vw,28px);align-items:start;}
-  @media (max-width:1000px){ .layout{grid-template-columns:1fr;} }
+  /* se apilan solo si hay sitio a lo alto; en pantallas bajas mandan las 2 columnas */
+  @media (max-width:1000px) and (min-height:541px){ .layout{grid-template-columns:1fr;} }
+  @media (max-width:600px){ .layout{grid-template-columns:1fr;} }
 
   /* ---- anillos ---- */
   .rings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(11px,1.1vw,20px);}
@@ -89,6 +91,43 @@
   .ev.allday .ttl{background:var(--evento);color:#fff;border-radius:4px;padding:1px 5px;font-weight:600;}
   .more{font-size:clamp(9px,0.68vw,11px);color:var(--muted);padding-left:6px;}
   .cal .empty{color:var(--muted);font-size:13px;padding:26px 2px;text-align:center;line-height:1.5;}
+
+  /* ================= modo compacto (pantallas bajas, p. ej. 800×400) ================= */
+  @media (max-height:540px){
+    body{padding:7px 10px;}
+    header.top{margin-bottom:7px;gap:8px;}
+    .brand{gap:8px;}
+    .brand h1{font-size:16px;}
+    .brand .sub{display:none;}
+    .clock .time{font-size:16px;}
+    .clock .date{font-size:9.5px;}
+
+    .layout{gap:9px;grid-template-columns:minmax(0,0.72fr) minmax(0,1.28fr);}
+
+    .rings{gap:7px;}
+    .card{padding:7px 6px;border-radius:14px;gap:4px;box-shadow:none;}
+    .ring-wrap{width:min(86px,17vh);}
+    .ring-center .val{font-size:13px;}
+    .ring-center .pct{font-size:9px;}
+    .meta-name{font-size:11px;}
+    .meta-sub{font-size:9px;}
+
+    .cal{padding:8px 9px;border-radius:14px;box-shadow:none;}
+    .cal-head{margin-bottom:4px;gap:6px;}
+    .cal-head h2{font-size:13.5px;}
+    .cal-head .tag{font-size:8px;letter-spacing:0.05em;}
+    .dow{margin-bottom:3px;}
+    .dow span{font-size:8.5px;}
+
+    .grid{border-radius:9px;height:calc(100vh - 104px);grid-auto-rows:minmax(0,1fr);}
+    .cell{min-height:0;padding:2px 3px;}
+    .num{font-size:9.5px;margin-bottom:1px;}
+    .cell.today .num{width:15px;height:15px;font-size:9px;}
+    .ev{font-size:8px;gap:2px;margin-bottom:1px;line-height:1.2;}
+    .ev .bar{width:2px;min-height:8px;}
+    .ev.allday .ttl{padding:0 3px;border-radius:3px;}
+    .more{font-size:7.5px;padding-left:4px;}
+  }
 </style>
 </head>
 <body>
@@ -151,7 +190,8 @@ const SEED_EVENTS = [
 
 const STORE_KEY = "forscore_progress_v3";
 const CAL_KEY   = "forscore_cal_v1";
-const MAX_EV    = 3;   /* citas visibles por casilla antes de "+N" */
+/* citas visibles por casilla antes de "+N" (menos en pantallas bajas) */
+function maxEventos(){ return window.innerHeight<=540 ? 2 : 3; }
 
 /* ================= almacenamiento ================= */
 function load(key, fallback){
@@ -271,7 +311,8 @@ function renderCalendar(){
 
     let html=`<span class="num">${fd}</span>`;
     const evs=fuera?[]:(porDia[clave]||[]);
-    evs.slice(0,MAX_EV).forEach(e=>{
+    const tope=maxEventos();
+    evs.slice(0,tope).forEach(e=>{
       const allday=!e.t;
       const titulo=esc(e.n||"");
       const completo=esc((e.t?e.t+" ":"")+(e.n||""));
@@ -281,7 +322,7 @@ function renderCalendar(){
                ${allday?"":`<span class="hh">${esc(e.t)}</span>`}
              </div>`;
     });
-    if(evs.length>MAX_EV) html+=`<div class="more">+${evs.length-MAX_EV}</div>`;
+    if(evs.length>tope) html+=`<div class="more">+${evs.length-tope}</div>`;
 
     cell.innerHTML=html;
     grid.appendChild(cell);
@@ -350,6 +391,9 @@ window.addEventListener("hashchange",handleHash);
 renderRings();
 renderCalendar();
 tickClock(); setInterval(tickClock,15000);
+/* al cambiar el tamaño de la pantalla, recalcula cuántas citas caben */
+let redibujar;
+window.addEventListener("resize",()=>{ clearTimeout(redibujar); redibujar=setTimeout(renderCalendar,150); });
 let ultimoDia=todayISO();
 setInterval(()=>{ if(todayISO()!==ultimoDia){ ultimoDia=todayISO(); renderCalendar(); } },60000);
 </script>
