@@ -367,9 +367,16 @@ function handleHash(){
         if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
         nuevos.push({d, t:(f[1]||"").trim(), n:(f.slice(2).join("|")||"").trim()});
       });
+      /* descarta repetidas (una cita puede llegar en dos búsquedas del Atajo) */
+      const vistas=new Set();
+      const unicas=nuevos.filter(e=>{
+        const k=`${e.d}|${e.t}|${e.n}`;
+        if(vistas.has(k)) return false;
+        vistas.add(k); return true;
+      });
       /* sustituye las citas de los meses recibidos, conserva el resto */
-      const meses=new Set(nuevos.map(e=>e.d.slice(0,7)));
-      EVENTS=EVENTS.filter(e=>!meses.has(String(e.d||"").slice(0,7))).concat(nuevos);
+      const meses=new Set(unicas.map(e=>e.d.slice(0,7)));
+      EVENTS=EVENTS.filter(e=>!meses.has(String(e.d||"").slice(0,7))).concat(unicas);
       save(CAL_KEY,EVENTS); cambiado=true;
     }
   });
