@@ -45,28 +45,6 @@
   @media (max-width:1000px) and (min-height:541px){ .layout{grid-template-columns:1fr;} }
   @media (max-width:600px){ .layout{grid-template-columns:1fr;} }
 
-  /* ---- columna izquierda: resumen semanal + anillos ---- */
-  .col-left{display:flex;flex-direction:column;gap:clamp(11px,1.1vw,20px);min-width:0;}
-
-  /* ---- resumen de la semana ---- */
-  .week{background:var(--card);border:1px solid var(--border);border-radius:20px;
-        padding:clamp(12px,1.2vw,20px) clamp(14px,1.3vw,22px);box-shadow:0 1px 3px rgba(17,19,24,0.05);
-        display:flex;align-items:center;justify-content:space-between;gap:clamp(12px,1.4vw,24px);}
-  .wk-left{flex:1 1 auto;min-width:0;}
-  .wk-lbl{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-  .wk-days{display:flex;gap:clamp(4px,0.45vw,7px);}
-  .wk-d{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;}
-  .wk-d .seg{display:block;width:100%;height:7px;border-radius:4px;background:var(--track);}
-  .wk-d.on  .seg{background:#7d8794;}
-  .wk-d.hoy .seg{background:#374151;}
-  .wk-d .l{font-size:clamp(9.5px,0.78vw,12px);color:var(--muted);line-height:1;}
-  .wk-d.on  .l{color:var(--secondary);}
-  .wk-d.hoy .l{color:var(--text);font-weight:700;}
-  .wk-right{flex:none;text-align:right;}
-  .wk-pct{font-size:clamp(21px,1.9vw,31px);font-weight:700;line-height:1;letter-spacing:-0.02em;
-          font-variant-numeric:tabular-nums;}
-  .wk-tot{font-size:clamp(10px,0.8vw,13px);color:var(--secondary);font-variant-numeric:tabular-nums;margin-top:4px;}
-
   /* ---- anillos ---- */
   .rings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(11px,1.1vw,20px);}
   @media (max-width:520px){ .rings{grid-template-columns:1fr;} }
@@ -128,20 +106,10 @@
     .clock .date{font-size:9.5px;}
 
     .layout{gap:9px;grid-template-columns:minmax(0,0.72fr) minmax(0,1.28fr);}
-    .col-left{gap:7px;}
-
-    .week{padding:6px 9px;border-radius:14px;box-shadow:none;gap:10px;}
-    .wk-lbl{font-size:8px;margin-bottom:4px;letter-spacing:0.05em;}
-    .wk-days{gap:3px;}
-    .wk-d{gap:2px;}
-    .wk-d .seg{height:5px;border-radius:3px;}
-    .wk-d .l{font-size:8.5px;}
-    .wk-pct{font-size:19px;}
-    .wk-tot{font-size:8.5px;margin-top:2px;}
 
     .rings{gap:7px;}
     .card{padding:7px 6px;border-radius:14px;gap:4px;box-shadow:none;}
-    .ring-wrap{width:min(76px,15vh);}
+    .ring-wrap{width:min(86px,17vh);}
     .ring-center .val{font-size:13px;}
     .ring-center .pct{font-size:9px;}
     .meta-name{font-size:11px;}
@@ -170,7 +138,7 @@
   <div class="brand">
     <h1>Progreso Semanal · forScore</h1>
     <span class="sub">Tablero de mandos</span>
-    <span class="ver">v12</span>
+    <span class="ver">v11</span>
   </div>
   <div class="clock">
     <div class="time" id="clock-time">--:--</div>
@@ -179,10 +147,7 @@
 </header>
 
 <div class="layout">
-  <div class="col-left">
-    <section class="week" id="week"></section>
-    <section class="rings" id="rings"></section>
-  </div>
+  <section class="rings" id="rings"></section>
 
   <section class="cal">
     <div class="cal-head">
@@ -254,32 +219,6 @@ function todayISO(){ const t=new Date(); return iso(t.getFullYear(),t.getMonth()
 
 /* ================= anillos ================= */
 function latestEntry(){ return DATA.length ? DATA.slice().sort((a,b)=>a.date<b.date?1:-1)[0] : null; }
-
-/* ---- resumen de la semana: días transcurridos y % sobre el total de las 4 metas ---- */
-const LETRAS_DIA=["L","M","X","J","V","S","D"];
-
-function renderWeek(){
-  const cur=latestEntry();
-  const total=GOALS.reduce((s,g)=>s+((cur&&cur[g.id])||0),0);
-  const objetivo=GOALS.reduce((s,g)=>s+g.target,0);          /* 4 × 3h = 12h */
-  const pct=objetivo>0 ? total/objetivo : 0;
-  const hoy=(new Date().getDay()+6)%7;                        /* 0 = lunes */
-
-  document.getElementById("week").innerHTML=`
-    <div class="wk-left">
-      <div class="wk-lbl">Esta semana</div>
-      <div class="wk-days">
-        ${LETRAS_DIA.map((L,i)=>`
-          <div class="wk-d${i<=hoy?" on":""}${i===hoy?" hoy":""}">
-            <span class="seg"></span><span class="l">${L}</span>
-          </div>`).join("")}
-      </div>
-    </div>
-    <div class="wk-right">
-      <div class="wk-pct">${Math.round(pct*100)}%</div>
-      <div class="wk-tot">${fmtTime(total)} de ${fmtTarget(objetivo)}</div>
-    </div>`;
-}
 
 function renderRings(){
   const wrap=document.getElementById("rings"); const cur=latestEntry(); wrap.innerHTML="";
@@ -451,7 +390,7 @@ function aplicarDatos(raw){
     }
   });
 
-  if(cambiado){ renderRings(); renderWeek(); renderCalendar(); }
+  if(cambiado){ renderRings(); renderCalendar(); }
   return cambiado;
 }
 
@@ -464,7 +403,7 @@ function handleHash(){
     try{ localStorage.removeItem(STORE_KEY); localStorage.removeItem(CAL_KEY); }catch(e){}
     DATA=JSON.parse(JSON.stringify(SEED));
     EVENTS=[];
-    renderRings(); renderWeek(); renderCalendar();
+    renderRings(); renderCalendar();
     history.replaceState(null,"",location.pathname+location.search);
     return;
   }
@@ -504,7 +443,6 @@ function tickClock(){
 handleHash();
 window.addEventListener("hashchange",handleHash);
 renderRings();
-renderWeek();
 renderCalendar();
 cargarRemoto();                          /* trae la copia compartida, si la hay */
 setInterval(cargarRemoto,5*60*1000);     /* y la refresca cada 5 minutos */
