@@ -52,21 +52,6 @@
           font-family: Helvetica, Arial, sans-serif; }
   .goal { font-size:13px; color:#444; margin-top:1px;
           font-family: Helvetica, Arial, sans-serif; }
-
-  /* ---------- citas de la semana, en tabla de lunes a domingo ---------- */
-  .evs { margin-top:8px; }
-  table.wk { width:100%; border-collapse:collapse; table-layout:fixed; }
-  table.wk td { border:1px solid #bbbbbb; vertical-align:top; padding:3px 4px; }
-  table.wk td.we { background:#e7e7e7; }
-  table.wk tr.dows td { border:0; text-align:center; padding:0 0 3px;
-                        color:#555555; font-weight:normal; }
-  table.wk tr.dows td.we { background:transparent; color:#8a8a8a; }
-  .dhead { margin-bottom:3px; white-space:nowrap; }
-  .dnum { font-weight:bold; color:#000; }
-  .dnum.hoy { display:inline-block; background:#000000; color:#ffffff;
-              border-radius:50%; text-align:center; }
-  .ev { border-left:3px solid #000000; padding-left:4px; margin-top:2px;
-        line-height:1.15; word-wrap:break-word; }
 </style>
 </head>
 <body>
@@ -93,8 +78,6 @@
 
   <div class="rings" id="rings"></div>
 
-  <div class="evs" id="evs"></div>
-
 </div>
 
 <script>
@@ -111,11 +94,9 @@ var GOALS = [
   { id:"guitarra", name:"GUITARRA",             target: 3*3600 }
 ];
 var LETRAS = ["L","M","X","J","V","S","D"];
-var NOMBRES_DIA = ["lun","mar","mié","jue","vie","sáb","dom"];
 var CLAVE = "forscore_bn_v1";
 
 var datos = { ensayo:0, estudio:0, acordeon:0, guitarra:0 };
-var citas = [];   /* [{d:"2026-08-15", t:"21:00", n:"..."}] */
 
 /* ---------- utilidades ---------- */
 function pad2(n){ n = String(n); return n.length < 2 ? "0" + n : n; }
@@ -158,54 +139,19 @@ function decode(s){
 function aplicar(texto){
   if (!texto) return false;
   if (texto.indexOf("#") >= 0) texto = texto.substring(texto.indexOf("#") + 1);
-  var hubo = false, i, v;
-
-  /* tiempos */
-  var m = /(?:^|&)add=([\s\S]*?)(?=&(?:add|cal)=|$)/i.exec(texto);
-  if (m){
-    var partes = decode(m[1]).split(",");
-    for (i = 0; i < GOALS.length; i++){
-      v = parseTime(partes[i+1]);
-      if (v !== null){ datos[GOALS[i].id] = v; hubo = true; }
-    }
+  var m = /(?:^|&)add=([^&]*)/i.exec(texto);
+  if (!m) return false;
+  var partes = decode(m[1]).split(","), i, v, hubo = false;
+  for (i = 0; i < GOALS.length; i++){
+    v = parseTime(partes[i+1]);
+    if (v !== null){ datos[GOALS[i].id] = v; hubo = true; }
   }
-
-  /* citas */
-  var c = /(?:^|&)cal=([\s\S]*?)(?=&(?:add|cal)=|$)/i.exec(texto);
-  if (c){
-    var trozos = decode(c[1]).split(";"), nuevas = [], f, d;
-    for (i = 0; i < trozos.length; i++){
-      f = trozos[i].replace(/^\s+|\s+$/g, "").split("|");
-      d = (f[0] || "").replace(/^\s+|\s+$/g, "");
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
-      nuevas.push({
-        d: d,
-        t: (f[1] || "").replace(/^\s+|\s+$/g, ""),
-        n: (f.slice(2).join("|") || "").replace(/^\s+|\s+$/g, "")
-      });
-    }
-    if (nuevas.length){ citas = nuevas; hubo = true; }
-  }
-
-  if (hubo){
-    try {
-      localStorage.setItem(CLAVE, JSON.stringify({ t: datos, c: citas }));
-    } catch (e) {}
-  }
+  if (hubo){ try { localStorage.setItem(CLAVE, JSON.stringify(datos)); } catch (e) {} }
   return hubo;
 }
 function cargarGuardado(){
-  try {
-    var s = localStorage.getItem(CLAVE);
-    if (!s) return;
-    var o = JSON.parse(s);
-    if (o && o.t){ datos = o.t; citas = o.c || []; }
-    else if (o) { datos = o; }        /* formato antiguo */
-  } catch (e) {}
+  try { var s = localStorage.getItem(CLAVE); if (s) datos = JSON.parse(s); } catch (e) {}
 }
-var ultimoContenido = "";   /* para no repintar si no ha cambiado nada */
-var ultimoIntento = 0;
-
 function cargarGist(){
   if (!GIST_ID) return;
   try {
@@ -216,38 +162,18 @@ function cargarGist(){
       try {
         var j = JSON.parse(x.responseText);
         var f = j.files && j.files["datos.txt"];
-        if (!f || !f.content) return;
-        /* si el contenido es idéntico, no se toca la pantalla:
-           en tinta electrónica cada repintado cuesta y deja sombras */
-        if (f.content === ultimoContenido) return;
-        ultimoContenido = f.content;
-        if (aplicar(f.content)) pintar();
+        if (f && f.content && aplicar(f.content)) pintar();
       } catch (e) {}
     };
     x.send(null);
   } catch (e) {}
 }
 
-/* Se consulta al volver de la suspensión, al recuperar el foco o al tocar
-   la pantalla, con un freno de 20 segundos para no repetir sin sentido. */
-function refrescar(){
-  var ahora = (new Date()).getTime();
-  if (ahora - ultimoIntento < 20000) return;
-  ultimoIntento = ahora;
-  cargarGist();
-}
-
-function alEvento(obj, nombre, fn){
-  if (obj.addEventListener) obj.addEventListener(nombre, fn, false);
-  else if (obj.attachEvent) obj.attachEvent("on" + nombre, fn);
-}
-
 /* ---------- medidas según el alto de pantalla ---------- */
 function medidas(){
   var h = (window.innerHeight || 600);
-  if (h < 520)  return { dot:24, hoy:32, alto:34, anillo:74,  val:18, pc:10, nom:12, obj:10, big:28, pad:1, ev:9.5, celda:52 };
-  if (h < 680)  return { dot:30, hoy:38, alto:44, anillo:104, val:23, pc:12, nom:14, obj:11, big:34, pad:3, ev:11, celda:62 };
-  return              { dot:34, hoy:44, alto:50, anillo:124, val:27, pc:14, nom:15, obj:12, big:40, pad:5, ev:12, celda:74 };
+  if (h < 520) return { dot:28, hoy:36, alto:40, anillo:104, val:23, pc:12, nom:14, obj:11, big:32, pad:3 };
+  return          { dot:36, hoy:46, alto:52, anillo:158, val:32, pc:15, nom:17, obj:13, big:44, pad:10 };
 }
 
 /* ---------- dibujo ---------- */
@@ -315,64 +241,6 @@ function pintar(){
          '</div>';
   }
   document.getElementById("rings").innerHTML = s;
-
-  pintarCitas(M, ahora, hoy);
-}
-
-/* ---------- citas de la semana en curso (lunes a domingo) ---------- */
-function claveFecha(f){
-  return f.getFullYear() + "-" + pad2(f.getMonth()+1) + "-" + pad2(f.getDate());
-}
-function escapar(s){
-  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function pintarCitas(M, ahora, hoy){
-  var lunes = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate() - hoy);
-  var porDia = {}, i, j;
-  for (i = 0; i < citas.length; i++){
-    if (!porDia[citas[i].d]) porDia[citas[i].d] = [];
-    porDia[citas[i].d].push(citas[i]);
-  }
-
-  var celdas = "", cabecera = "", circulo = Math.round((M.ev + 1) * 1.95);
-  for (i = 0; i < 7; i++){
-    cabecera += '<td class="' + (i >= 5 ? 'we' : '') + '" style="font-size:' +
-                (M.ev - 0.5) + 'px">' + NOMBRES_DIA[i] + '</td>';
-  }
-  for (i = 0; i < 7; i++){
-    var f = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() + i);
-    var lista = porDia[claveFecha(f)] || [];
-
-    lista.sort(function(a, b){
-      var at = a.t || "", bt = b.t || "";
-      if (!at && bt) return -1;
-      if (at && !bt) return 1;
-      return at < bt ? -1 : (at > bt ? 1 : 0);
-    });
-
-    var dentro = '<div class="dhead">' +
-                   '<span class="dnum' + (i === hoy ? ' hoy' : '') + '" style="font-size:' +
-                      (M.ev + 1) + 'px' +
-                      (i === hoy ? ';width:' + circulo + 'px;height:' + circulo +
-                                   'px;line-height:' + circulo + 'px' : '') + '">' +
-                      f.getDate() + '</span>' +
-                 '</div>';
-
-    for (j = 0; j < lista.length; j++){
-      dentro += '<div class="ev" style="font-size:' + M.ev + 'px">' +
-                   escapar(lista[j].n) + '</div>';
-    }
-
-    celdas += '<td class="' + (i >= 5 ? 'we' : '') + '" style="height:' +
-              M.celda + 'px">' + dentro + '</td>';
-  }
-
-  document.getElementById("evs").innerHTML =
-    '<table class="wk">' +
-      '<tr class="dows">' + cabecera + '</tr>' +
-      '<tr>' + celdas + '</tr>' +
-    '</table>';
 }
 
 /* ---------- arranque ---------- */
@@ -381,19 +249,7 @@ if (location.hash) aplicar(location.hash);
 pintar();
 cargarGist();
 setInterval(cargarGist, 5*60*1000);
-
-/* al despertar el aparato o volver a la página, comprobar en el acto */
-alEvento(window, "focus", refrescar);
-alEvento(window, "pageshow", refrescar);
-alEvento(document, "touchstart", refrescar);
-alEvento(document, "click", refrescar);
-alEvento(document, "keydown", refrescar);
-if (typeof document.addEventListener === "function"){
-  document.addEventListener("visibilitychange", function(){
-    if (!document.hidden) refrescar();
-  }, false);
-}
-alEvento(window, "resize", pintar);
+if (window.addEventListener) window.addEventListener("resize", pintar, false);
 </script>
 </body>
 </html>
