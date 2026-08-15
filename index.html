@@ -24,6 +24,8 @@
     --m-guitarra: #e0752e;
     --evento:     #2a78d6;
     --hoy:        #d03b3b;
+    --pasado:     #b45309;   /* días ya transcurridos: naranja oscuro */
+    --actual:     #1a7f4b;   /* día de hoy: verde */
     font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
   }
   *{box-sizing:border-box;}
@@ -53,15 +55,22 @@
         padding:clamp(12px,1.2vw,20px) clamp(14px,1.3vw,22px);box-shadow:0 1px 3px rgba(17,19,24,0.05);
         display:flex;align-items:center;justify-content:space-between;gap:clamp(12px,1.4vw,24px);}
   .wk-left{flex:1 1 auto;min-width:0;}
-  .wk-lbl{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;}
-  .wk-days{display:flex;gap:clamp(4px,0.45vw,7px);}
-  .wk-d{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;gap:4px;}
-  .wk-d .seg{display:block;width:100%;height:7px;border-radius:4px;background:var(--track);}
-  .wk-d.on  .seg{background:#7d8794;}
-  .wk-d.hoy .seg{background:#374151;}
-  .wk-d .l{font-size:clamp(9.5px,0.78vw,12px);color:var(--muted);line-height:1;}
-  .wk-d.on  .l{color:var(--secondary);}
-  .wk-d.hoy .l{color:var(--text);font-weight:700;}
+  .wk-lbl{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+
+  /* línea continua con un círculo por día */
+  .wk-track{--dot:clamp(24px,2.1vw,32px);--linea:4px;position:relative;}
+  .wk-line{position:absolute;top:calc(var(--dot)/2 - var(--linea)/2);
+           left:calc(var(--dot)/2);right:calc(var(--dot)/2);
+           height:var(--linea);border-radius:var(--linea);background:var(--track);}
+  .wk-line.fill{right:auto;width:calc((100% - var(--dot)) * var(--p));background:var(--pasado);}
+  .wk-dots{position:relative;display:flex;justify-content:space-between;}
+  .wk-dot{width:var(--dot);height:var(--dot);border-radius:50%;flex:none;
+          display:flex;align-items:center;justify-content:center;
+          font-size:clamp(11px,0.92vw,14px);font-weight:700;line-height:1;
+          background:var(--track);color:var(--muted);
+          box-shadow:0 0 0 3px var(--card);}
+  .wk-dot.on {background:var(--pasado);color:#fff;}
+  .wk-dot.hoy{background:var(--actual);color:#fff;}
   .wk-right{flex:none;text-align:right;}
   .wk-pct{font-size:clamp(21px,1.9vw,31px);font-weight:700;line-height:1;letter-spacing:-0.02em;
           font-variant-numeric:tabular-nums;}
@@ -131,11 +140,9 @@
     .col-left{gap:7px;}
 
     .week{padding:6px 9px;border-radius:14px;box-shadow:none;gap:10px;}
-    .wk-lbl{font-size:8px;margin-bottom:4px;letter-spacing:0.05em;}
-    .wk-days{gap:3px;}
-    .wk-d{gap:2px;}
-    .wk-d .seg{height:5px;border-radius:3px;}
-    .wk-d .l{font-size:8.5px;}
+    .wk-lbl{font-size:8px;margin-bottom:6px;letter-spacing:0.05em;}
+    .wk-track{--dot:18px;--linea:3px;}
+    .wk-dot{font-size:9px;box-shadow:0 0 0 2px var(--card);}
     .wk-pct{font-size:19px;}
     .wk-tot{font-size:8.5px;margin-top:2px;}
 
@@ -170,7 +177,7 @@
   <div class="brand">
     <h1>Progreso Semanal · forScore</h1>
     <span class="sub">Tablero de mandos</span>
-    <span class="ver">v12</span>
+    <span class="ver">v14</span>
   </div>
   <div class="clock">
     <div class="time" id="clock-time">--:--</div>
@@ -243,6 +250,12 @@ function fmtTime(sec){
   const pad=n=>String(n).padStart(2,"0");
   return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
+/* solo horas y minutos, sin segundos */
+function fmtHM(sec){
+  if(sec==null) return "—";
+  sec=Math.floor(sec);
+  return `${Math.floor(sec/3600)}:${pad2(Math.floor((sec%3600)/60))}`;
+}
 function fmtTarget(sec){
   if(sec%3600===0) return (sec/3600)+"h";
   if(sec%60===0)   return (sec/60)+" min";
@@ -268,16 +281,18 @@ function renderWeek(){
   document.getElementById("week").innerHTML=`
     <div class="wk-left">
       <div class="wk-lbl">Esta semana</div>
-      <div class="wk-days">
-        ${LETRAS_DIA.map((L,i)=>`
-          <div class="wk-d${i<=hoy?" on":""}${i===hoy?" hoy":""}">
-            <span class="seg"></span><span class="l">${L}</span>
-          </div>`).join("")}
+      <div class="wk-track" style="--p:${(hoy/6).toFixed(4)}">
+        <div class="wk-line"></div>
+        <div class="wk-line fill"></div>
+        <div class="wk-dots">
+          ${LETRAS_DIA.map((L,i)=>
+            `<span class="wk-dot${i<hoy?" on":""}${i===hoy?" hoy":""}">${L}</span>`).join("")}
+        </div>
       </div>
     </div>
     <div class="wk-right">
       <div class="wk-pct">${Math.round(pct*100)}%</div>
-      <div class="wk-tot">${fmtTime(total)} de ${fmtTarget(objetivo)}</div>
+      <div class="wk-tot">${fmtHM(total)} de ${fmtTarget(objetivo)}</div>
     </div>`;
 }
 
@@ -297,7 +312,7 @@ function renderRings(){
             stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
         </svg>
         <div class="ring-center">
-          <span class="val">${fmtTime(val)}</span>
+          <span class="val">${fmtHM(val)}</span>
           <span class="pct">${Math.round(pct*100)}%</span>
         </div>
       </div>
