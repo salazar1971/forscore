@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resumen Mensual · forScore</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:#ffffff; --card:#ffffff; --track:#eceef1;
+    --text:#111318; --secondary:#4b5563; --muted:#8a8f98;
+    --border:#e6e7eb; --grid:#dfe1e6; --suave:#f7f8f9;
+    --m-ensayo:#1a7f4b; --m-estudio:#43c46f; --m-acordeon:#2a78d6; --m-guitarra:#e0752e;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);}
+  body{min-height:100vh;padding:clamp(16px,2vw,38px);}
+
+  header.top{display:flex;align-items:baseline;justify-content:space-between;
+             gap:16px;flex-wrap:wrap;margin-bottom:clamp(16px,2vw,30px);}
+  .brand{display:flex;align-items:baseline;gap:14px;}
+  .brand h1{font-size:clamp(20px,1.9vw,31px);font-weight:700;margin:0;letter-spacing:-0.02em;}
+  .brand .mes{color:var(--muted);font-size:clamp(13px,1.1vw,17px);text-transform:capitalize;}
+  .brand .ver{color:#c9ccd2;font-size:10px;font-variant-numeric:tabular-nums;}
+  .nav a{color:var(--secondary);text-decoration:none;font-size:13px;
+         border:1px solid var(--border);border-radius:9px;padding:6px 11px;margin-left:6px;}
+  .nav a:hover{border-color:var(--muted);}
+
+  /* ---- tarjetas por meta ---- */
+  .metas{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+         gap:clamp(11px,1.2vw,20px);margin-bottom:clamp(16px,1.8vw,28px);}
+  @media (max-width:820px){ .metas{grid-template-columns:repeat(2,minmax(0,1fr));} }
+  @media (max-width:460px){ .metas{grid-template-columns:1fr;} }
+  .mcard{background:var(--card);border:1px solid var(--border);border-radius:18px;
+         padding:clamp(13px,1.3vw,20px);box-shadow:0 1px 3px rgba(17,19,24,0.05);}
+  .mname{font-size:clamp(12px,1vw,14px);font-weight:700;letter-spacing:0.01em;}
+  .mpct{font-size:clamp(26px,2.4vw,40px);font-weight:700;line-height:1.05;
+        letter-spacing:-0.02em;font-variant-numeric:tabular-nums;margin-top:6px;}
+  .mtime{font-size:clamp(11px,0.9vw,13.5px);color:var(--secondary);
+         font-variant-numeric:tabular-nums;margin-top:2px;}
+  .bar{height:9px;border-radius:5px;background:var(--track);margin-top:10px;overflow:hidden;}
+  .bar span{display:block;height:100%;border-radius:5px;}
+
+  /* ---- barra de progreso simple (cada tarea la suya, identificada por su columna) ---- */
+  .pbar{position:relative;background:var(--track);border-radius:4px;overflow:hidden;
+        height:6px;margin-top:5px;width:100%;}
+  .pbar i{display:block;height:100%;border-radius:4px;}
+  .pbar.pasado{box-shadow:inset -3px 0 0 var(--text);}
+
+  /* ---- tarjeta del total del mes ---- */
+  .tot-card{background:var(--card);border:1px solid var(--border);border-radius:18px;
+            padding:clamp(14px,1.4vw,22px);box-shadow:0 1px 3px rgba(17,19,24,0.05);
+            margin-bottom:clamp(16px,1.8vw,28px);
+            display:flex;align-items:center;gap:clamp(14px,2vw,32px);flex-wrap:wrap;}
+  .tot-izq{flex:none;}
+  .tot-lbl{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);}
+  .tot-num{font-size:clamp(28px,2.8vw,46px);font-weight:700;line-height:1.05;
+           letter-spacing:-0.02em;font-variant-numeric:tabular-nums;margin-top:4px;}
+  .tot-sub{font-size:clamp(11px,0.9vw,14px);color:var(--secondary);
+           font-variant-numeric:tabular-nums;margin-top:3px;}
+  .tot-der{flex:1 1 260px;min-width:220px;}
+  .tot-der .pbar{height:24px;border-radius:7px;margin-top:0;}
+  .tot-pie{display:flex;justify-content:space-between;margin-top:7px;
+           font-size:clamp(10px,0.82vw,12px);color:var(--muted);font-variant-numeric:tabular-nums;}
+
+  td .val{display:block;}
+  td .obj{font-size:0.78em;color:var(--muted);}
+
+  /* ---- el total de cada fila, con más presencia ---- */
+  td.tot{width:17%;min-width:140px;}
+  td.tot .val{font-weight:700;}
+  td.tot .val .pc{font-weight:400;color:var(--muted);margin-left:7px;}
+  td.tot .pbar{height:14px;border-radius:5px;margin-top:6px;}
+  /* marca del objetivo semanal, al 100% del ancho */
+  td.tot .pbar:after{content:"";position:absolute;right:0;top:0;bottom:0;width:2px;
+                     background:var(--muted);opacity:.55;}
+
+  /* ---- tabla de semanas ---- */
+  .tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:18px;
+            box-shadow:0 1px 3px rgba(17,19,24,0.05);overflow:hidden;}
+  table{width:100%;border-collapse:collapse;}
+  th,td{padding:clamp(8px,0.9vw,13px) clamp(8px,1vw,15px);text-align:right;
+        font-size:clamp(12px,1vw,14.5px);font-variant-numeric:tabular-nums;
+        border-bottom:1px solid var(--grid);}
+  th{font-size:clamp(10px,0.82vw,12px);font-weight:600;color:var(--muted);
+     text-transform:uppercase;letter-spacing:0.05em;background:var(--suave);}
+  th:first-child,td:first-child{text-align:left;font-variant-numeric:normal;}
+  tr:last-child td{border-bottom:0;}
+  tr.actual td{background:#f4f8ff;}
+  tr.total td{font-weight:700;background:var(--suave);border-top:2px solid var(--grid);}
+  td.vacio{color:#c3c7ce;}
+  .pin{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;
+       vertical-align:baseline;}
+  .sem{white-space:nowrap;}
+  .sem .rot{color:var(--muted);font-size:0.85em;margin-left:6px;}
+  .aviso{color:var(--muted);font-size:13px;line-height:1.6;padding:26px 4px;text-align:center;}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Resumen Mensual</h1>
+    <span class="mes" id="mes">—</span>
+    <span class="ver">v1</span>
+  </div>
+  <div class="nav" id="nav"></div>
+</header>
+
+<section class="metas" id="metas"></section>
+<section id="totalMes"></section>
+<section class="tbl-wrap" id="tabla"></section>
+
+<script>
+"use strict";
+
+const GIST_ID = "67e43503e86392b72b6e17f0ad71e9c5";
+
+const GOALS = [
+  {id:"ensayo",   name:"PIANO · Ensayo",  target:3*3600, color:"var(--m-ensayo)"},
+  {id:"estudio",  name:"PIANO · Estudio", target:3*3600, color:"var(--m-estudio)"},
+  {id:"acordeon", name:"ACORDEÓN",        target:3*3600, color:"var(--m-acordeon)"},
+  {id:"guitarra", name:"GUITARRA",        target:3*3600, color:"var(--m-guitarra)"}
+];
+const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto",
+             "septiembre","octubre","noviembre","diciembre"];
+const CORTO=["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+const CACHE = "forscore_mes_v1";
+
+/* lecturas: { "2026-08-15": {ensayo:..,estudio:..,..} } */
+let lecturas = {};
+
+/* ---------- utilidades ---------- */
+const pad2 = n => String(n).padStart(2,"0");
+function parseTime(s){
+  if(s==null) return null;
+  s=String(s).trim(); if(!s) return null;
+  const p=s.split(":").map(x=>parseInt(x,10));
+  if(p.some(isNaN)) return null;
+  if(p.length===1) return p[0];
+  if(p.length===2) return p[0]*60+p[1];
+  if(p.length===3) return p[0]*3600+p[1]*60+p[2];
+  return null;
+}
+const fmtHM = sec => `${Math.floor((sec||0)/3600)}:${pad2(Math.floor(((sec||0)%3600)/60))}`;
+function fmtObjetivo(sec){ return sec%3600===0 ? (sec/3600)+"h" : fmtHM(sec); }
+function safeDecode(s){
+  let out=String(s).replace(/\+/g," ");
+  for(let i=0;i<3;i++){
+    if(!/%[0-9A-Fa-f]{2}/.test(out)) break;
+    let d; try{ d=decodeURIComponent(out); }catch(e){ break; }
+    if(d===out) break;
+    out=d;
+  }
+  return out;
+}
+function iso(f){ return `${f.getFullYear()}-${pad2(f.getMonth()+1)}-${pad2(f.getDate())}`; }
+function lunesDe(clave){
+  const [y,m,d]=clave.split("-").map(Number);
+  const f=new Date(y,m-1,d);
+  return new Date(y, m-1, d - ((f.getDay()+6)%7));
+}
+
+/* ---------- lectura del gist ---------- */
+/* Cada archivo del gist puede contener un "add=FECHA,t1,t2,t3,t4".
+   La fecha de dentro manda: el nombre del archivo da igual. */
+function tragar(texto){
+  if(!texto) return;
+  let t=String(texto);
+  if(t.includes("#")) t=t.slice(t.indexOf("#")+1);
+  const m=/(?:^|&)add=([\s\S]*?)(?=&(?:add|cal)=|$)/i.exec(t);
+  if(!m) return;
+  const p=safeDecode(m[1]).split(",").map(s=>s.trim());
+  const fecha=p[0];
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return;
+  const reg = lecturas[fecha] || {};
+  GOALS.forEach((g,i)=>{
+    const v=parseTime(p[i+1]);
+    /* si ya había lectura de ese día, nos quedamos con la mayor */
+    if(v!=null) reg[g.id]=Math.max(v, reg[g.id]||0);
+  });
+  lecturas[fecha]=reg;
+}
+
+async function cargar(){
+  try{
+    const r=await fetch(`https://api.github.com/gists/${GIST_ID}?t=${Date.now()}`,{cache:"no-store"});
+    if(!r.ok) return false;
+    const j=await r.json();
+    if(!j.files) return false;
+    Object.keys(j.files).forEach(k=>{
+      const f=j.files[k];
+      if(f && f.content) tragar(f.content);
+    });
+    try{ localStorage.setItem(CACHE, JSON.stringify(lecturas)); }catch(e){}
+    return true;
+  }catch(e){ return false; }
+}
+function cargarCache(){
+  try{ const s=localStorage.getItem(CACHE); if(s) lecturas=JSON.parse(s); }catch(e){}
+}
+
+/* ---------- agrupar por semana ---------- */
+/* forScore reinicia las metas cada semana, así que la lectura más alta
+   de una semana es el total de esa semana. */
+function semanasDelMes(y, m){
+  const porSemana={};
+  Object.keys(lecturas).forEach(fecha=>{
+    const lun=lunesDe(fecha);
+    const k=iso(lun);
+    if(!porSemana[k]) porSemana[k]={};
+    GOALS.forEach(g=>{
+      const v=lecturas[fecha][g.id];
+      if(v!=null) porSemana[k][g.id]=Math.max(v, porSemana[k][g.id]||0);
+    });
+  });
+
+  /* una semana pertenece al mes en el que cae su lunes */
+  const salida=[];
+  const primero=new Date(y, m-1, 1);
+  let cur=new Date(y, m-1, 1 - ((primero.getDay()+6)%7));
+  if(cur.getMonth()!==m-1 || cur.getFullYear()!==y) cur=new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+7);
+  while(cur.getMonth()===m-1 && cur.getFullYear()===y){
+    const k=iso(cur);
+    salida.push({ lunes:new Date(cur), clave:k, datos:porSemana[k]||null });
+    cur=new Date(cur.getFullYear(), cur.getMonth(), cur.getDate()+7);
+  }
+  return salida;
+}
+
+/* Barra sencilla de avance sobre su propio objetivo. No hace falta color para
+   saber de qué es: lo dice la columna en la que está. */
+function barra(valor, objetivo, color){
+  const p = objetivo>0 ? valor/objetivo : 0;
+  const ancho = Math.max(0, Math.min(1, p))*100;
+  return `<div class="pbar${p>=1?" pasado":""}" title="${fmtHM(valor)} de ${fmtObjetivo(objetivo)} · ${Math.round(p*100)}%">` +
+         `<i style="width:${ancho.toFixed(1)}%;background:${color||"var(--text)"}"></i></div>`;
+}
+
+/* ---------- dibujo ---------- */
+function mesPedido(){
+  const q=/[?&]mes=(\d{4})-(\d{2})/.exec(location.search);
+  if(q) return { y:+q[1], m:+q[2] };
+  const h=new Date();
+  return { y:h.getFullYear(), m:h.getMonth()+1 };
+}
+
+function pintar(){
+  const {y,m}=mesPedido();
+  document.getElementById("mes").textContent=`${MESES[m-1]} de ${y}`;
+
+  /* navegación entre meses */
+  const ant=new Date(y, m-2, 1), sig=new Date(y, m, 1);
+  document.getElementById("nav").innerHTML=
+    `<a href="?mes=${ant.getFullYear()}-${pad2(ant.getMonth()+1)}">← ${MESES[ant.getMonth()]}</a>` +
+    `<a href="?mes=${sig.getFullYear()}-${pad2(sig.getMonth()+1)}">${MESES[sig.getMonth()]} →</a>`;
+
+  const semanas=semanasDelMes(y,m);
+  const conDatos=semanas.filter(s=>s.datos);
+  const nSem=semanas.length;
+  const hoyLunes=iso(lunesDe(iso(new Date())));
+
+  /* --- totales por meta --- */
+  const totalMeta={}, objMeta={};
+  GOALS.forEach(g=>{
+    totalMeta[g.id]=0;
+    objMeta[g.id]=g.target*nSem;
+    semanas.forEach(s=>{ if(s.datos && s.datos[g.id]!=null) totalMeta[g.id]+=s.datos[g.id]; });
+  });
+
+  document.getElementById("metas").innerHTML = GOALS.map(g=>{
+    const p = objMeta[g.id]>0 ? totalMeta[g.id]/objMeta[g.id] : 0;
+    const ancho = Math.max(0, Math.min(1, p))*100;
+    return `<div class="mcard">
+      <div class="mname">${g.name}</div>
+      <div class="mpct">${Math.round(p*100)}%</div>
+      <div class="mtime">${fmtHM(totalMeta[g.id])} de ${fmtObjetivo(objMeta[g.id])}</div>
+      <div class="bar"><span style="width:${ancho.toFixed(1)}%;background:${g.color}"></span></div>
+      <div class="mtime" style="margin-top:6px">${p>=1?"Objetivo cumplido":"Faltan "+fmtHM(Math.max(0,objMeta[g.id]-totalMeta[g.id]))}</div>
+    </div>`;
+  }).join("");
+
+  /* --- total del mes, con su gráfico --- */
+  const totalMesSeg = GOALS.reduce((a,g)=>a+totalMeta[g.id],0);
+  const objMesSeg   = GOALS.reduce((a,g)=>a+objMeta[g.id],0);
+  const pctMesNum   = objMesSeg>0 ? Math.round(totalMesSeg/objMesSeg*100) : 0;
+
+  document.getElementById("totalMes").innerHTML = `
+    <div class="tot-card">
+      <div class="tot-izq">
+        <div class="tot-lbl">Total del mes</div>
+        <div class="tot-num">${pctMesNum}%</div>
+        <div class="tot-sub">${fmtHM(totalMesSeg)} de ${fmtObjetivo(objMesSeg)}</div>
+      </div>
+      <div class="tot-der">
+        ${barra(totalMesSeg, objMesSeg)}
+        <div class="tot-pie"><span>0</span><span>${fmtObjetivo(objMesSeg)}</span></div>
+      </div>
+    </div>`;
+
+  /* --- tabla de semanas --- */
+  if(!conDatos.length){
+    document.getElementById("tabla").innerHTML =
+      `<div class="aviso">Todavía no hay datos guardados de este mes.<br>
+       El histórico empieza a acumularse en cuanto el atajo escriba la copia semanal.</div>`;
+    return;
+  }
+
+  const filas = semanas.map(s=>{
+    const dom=new Date(s.lunes.getFullYear(), s.lunes.getMonth(), s.lunes.getDate()+6);
+    const rot = s.lunes.getMonth()===dom.getMonth()
+      ? `${s.lunes.getDate()} – ${dom.getDate()} ${CORTO[dom.getMonth()]}`
+      : `${s.lunes.getDate()} ${CORTO[s.lunes.getMonth()]} – ${dom.getDate()} ${CORTO[dom.getMonth()]}`;
+    const esActual = s.clave===hoyLunes;
+    let suma=0, hay=false;
+    const celdas = GOALS.map(g=>{
+      const v = s.datos ? s.datos[g.id] : null;
+      if(v==null) return `<td class="vacio">—</td>`;
+      suma+=v; hay=true;
+      return `<td><span class="val">${fmtHM(v)}</span>${barra(v, g.target, g.color)}</td>`;
+    }).join("");
+    const objSem = GOALS.reduce((a,g)=>a+g.target,0);
+    return `<tr class="${esActual?"actual":""}">
+      <td class="sem">Semana ${rot}${esActual?' <span class="rot">· en curso</span>':''}</td>
+      ${celdas}
+      <td class="tot">${hay
+        ? `<span class="val">${fmtHM(suma)}<span class="pc">${Math.round(suma/objSem*100)}%</span></span>${barra(suma, objSem)}`
+        : '<span class="vacio">—</span>'}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("tabla").innerHTML = `
+    <table>
+      <thead><tr>
+        <th>Semana</th>
+        ${GOALS.map(g=>`<th><span class="pin" style="background:${g.color}"></span>${g.name}</th>`).join("")}
+        <th>Total</th>
+      </tr></thead>
+      <tbody>
+        ${filas}
+        <tr class="total">
+          <td>Total del mes</td>
+          ${GOALS.map(g=>`<td><span class="val">${fmtHM(totalMeta[g.id])}</span>${barra(totalMeta[g.id], objMeta[g.id], g.color)}</td>`).join("")}
+          <td class="tot"><span class="val">${fmtHM(totalMesSeg)}<span class="pc">${pctMesNum}%</span></span>${barra(totalMesSeg, objMesSeg)}</td>
+        </tr>
+      </tbody>
+    </table>`;
+}
+
+/* ---------- arranque ---------- */
+cargarCache();
+pintar();
+cargar().then(ok=>{ if(ok) pintar(); });
+</script>
+</body>
+</html>
