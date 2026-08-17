@@ -251,9 +251,11 @@ function pintar(){
 
   /* navegación entre meses */
   const ant=new Date(y, m-2, 1), sig=new Date(y, m, 1);
+  /* los enlaces vuelven a pasar por el lanzador (./) para no comerse
+     una copia en caché al cambiar de mes */
   document.getElementById("nav").innerHTML=
-    `<a href="?mes=${ant.getFullYear()}-${pad2(ant.getMonth()+1)}">← ${MESES[ant.getMonth()]}</a>` +
-    `<a href="?mes=${sig.getFullYear()}-${pad2(sig.getMonth()+1)}">${MESES[sig.getMonth()]} →</a>`;
+    `<a href="./?p=mes&mes=${ant.getFullYear()}-${pad2(ant.getMonth()+1)}">← ${MESES[ant.getMonth()]}</a>` +
+    `<a href="./?p=mes&mes=${sig.getFullYear()}-${pad2(sig.getMonth()+1)}">${MESES[sig.getMonth()]} →</a>`;
 
   const semanas=semanasDelMes(y,m);
   const conDatos=semanas.filter(s=>s.datos);

@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Progreso Semanal · forScore</title>
+<style>
+  :root{
+    color-scheme: light;
+    --bg:         #ffffff;
+    --card:       #ffffff;
+    --card-2:     #f1f3f5;
+    --track:      #eceef1;
+    --text:       #111318;
+    --secondary:  #4b5563;
+    --muted:      #8a8f98;
+    --border:     #e6e7eb;
+    --grid:       #dfe1e6;
+    --weekend:    #fafbfc;
+    --m-ensayo:   #1a7f4b;
+    --m-estudio:  #43c46f;
+    --m-acordeon: #2a78d6;
+    --m-guitarra: #e0752e;
+    --evento:     #2a78d6;
+    --hoy:        #d03b3b;
+    --pasado:     #b45309;   /* días ya transcurridos: naranja oscuro */
+    --actual:     #1a7f4b;   /* día de hoy: verde */
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);}
+  body{min-height:100vh;padding:clamp(14px,1.8vw,34px);}
+
+  header.top{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:clamp(12px,1.5vw,24px);}
+  .brand{display:flex;align-items:baseline;gap:14px;}
+  .brand h1{font-size:clamp(19px,1.8vw,30px);font-weight:700;margin:0;letter-spacing:-0.02em;}
+  .brand .sub{color:var(--muted);font-size:clamp(12px,1vw,15px);}
+  .brand .ver{color:#c9ccd2;font-size:10px;font-variant-numeric:tabular-nums;}
+  .clock{text-align:right;line-height:1.15;}
+  .clock .time{font-size:clamp(19px,1.8vw,29px);font-weight:700;font-variant-numeric:tabular-nums;}
+  .clock .date{color:var(--muted);font-size:clamp(11px,0.9vw,14px);text-transform:capitalize;}
+
+  /* ---- dos columnas: anillos | calendario ---- */
+  .layout{display:grid;grid-template-columns:minmax(0,0.78fr) minmax(0,1.22fr);gap:clamp(14px,1.5vw,28px);align-items:start;}
+  /* se apilan solo si hay sitio a lo alto; en pantallas bajas mandan las 2 columnas */
+  @media (max-width:1000px) and (min-height:541px){ .layout{grid-template-columns:1fr;} }
+  @media (max-width:600px){ .layout{grid-template-columns:1fr;} }
+
+  /* ---- columna izquierda: resumen semanal + anillos ---- */
+  .col-left{display:flex;flex-direction:column;gap:clamp(11px,1.1vw,20px);min-width:0;}
+
+  /* ---- resumen de la semana ---- */
+  .week{background:var(--card);border:1px solid var(--border);border-radius:20px;
+        padding:clamp(12px,1.2vw,20px) clamp(14px,1.3vw,22px);box-shadow:0 1px 3px rgba(17,19,24,0.05);
+        display:flex;align-items:center;justify-content:space-between;gap:clamp(12px,1.4vw,24px);}
+  .wk-left{flex:1 1 auto;min-width:0;}
+  .wk-lbl{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+
+  /* línea continua con un círculo por día */
+  .wk-track{--dot:clamp(24px,2.1vw,32px);--linea:4px;position:relative;}
+  .wk-line{position:absolute;top:calc(var(--dot)/2 - var(--linea)/2);
+           left:calc(var(--dot)/2);right:calc(var(--dot)/2);
+           height:var(--linea);border-radius:var(--linea);background:var(--track);}
+  .wk-line.fill{right:auto;width:calc((100% - var(--dot)) * var(--p));background:var(--pasado);}
+  .wk-dots{position:relative;display:flex;justify-content:space-between;}
+  .wk-dot{width:var(--dot);height:var(--dot);border-radius:50%;flex:none;
+          display:flex;align-items:center;justify-content:center;
+          font-size:clamp(11px,0.92vw,14px);font-weight:700;line-height:1;
+          background:var(--track);color:var(--muted);
+          box-shadow:0 0 0 3px var(--card);}
+  .wk-dot.on {background:var(--pasado);color:#fff;}
+  .wk-dot.hoy{background:var(--actual);color:#fff;}
+  .wk-right{flex:none;text-align:right;}
+  .wk-pct{font-size:clamp(21px,1.9vw,31px);font-weight:700;line-height:1;letter-spacing:-0.02em;
+          font-variant-numeric:tabular-nums;}
+  .wk-tot{font-size:clamp(10px,0.8vw,13px);color:var(--secondary);font-variant-numeric:tabular-nums;margin-top:4px;}
+
+  /* ---- anillos ---- */
+  .rings{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:clamp(11px,1.1vw,20px);}
+  @media (max-width:520px){ .rings{grid-template-columns:1fr;} }
+  .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:clamp(12px,1.3vw,22px);
+        display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:0 1px 3px rgba(17,19,24,0.05);}
+  .ring-wrap{position:relative;width:clamp(112px,8.5vw,158px);aspect-ratio:1;}
+  .ring-wrap svg{width:100%;height:100%;transform:rotate(-90deg);}
+  .ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;}
+  .ring-center .val{font-size:clamp(16px,1.3vw,22px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.01em;}
+  .ring-center .pct{font-size:clamp(10px,0.8vw,13px);color:var(--muted);font-variant-numeric:tabular-nums;}
+  .meta-name{font-size:clamp(13px,1vw,16px);font-weight:700;text-align:center;}
+  .meta-sub{font-size:clamp(10px,0.8vw,13px);color:var(--secondary);text-align:center;}
+
+  /* ---- calendario en rejilla ---- */
+  .cal{background:var(--card);border:1px solid var(--border);border-radius:20px;
+       padding:clamp(14px,1.3vw,22px);box-shadow:0 1px 3px rgba(17,19,24,0.05);}
+  .cal-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;}
+  .cal-head h2{margin:0;font-size:clamp(17px,1.4vw,24px);font-weight:700;letter-spacing:-0.01em;}
+  .cal-head h2 .yr{color:var(--muted);font-weight:400;}
+  .cal-head .tag{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);}
+
+  .dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin-bottom:5px;}
+  .dow span{text-align:center;font-size:clamp(10px,0.8vw,12.5px);color:var(--muted);
+            text-transform:lowercase;letter-spacing:0.02em;}
+  .dow span.we{color:#a9adb5;}
+
+  .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+        gap:1px;background:var(--grid);border:1px solid var(--grid);border-radius:12px;overflow:hidden;}
+  .cell{background:var(--card);min-height:clamp(62px,8.5vh,108px);padding:5px 5px 6px;overflow:hidden;}
+  .cell.we{background:var(--weekend);}
+  .cell.out{background:#fbfbfc;}
+  .cell.out .num{color:#c3c7ce;}
+  .num{font-size:clamp(11.5px,0.92vw,14px);font-weight:600;font-variant-numeric:tabular-nums;
+       color:var(--secondary);line-height:1;margin-bottom:4px;display:block;}
+  .cell.today .num{background:var(--hoy);color:#fff;border-radius:999px;
+       width:clamp(19px,1.6vw,24px);height:clamp(19px,1.6vw,24px);
+       display:flex;align-items:center;justify-content:center;font-weight:700;}
+  .ev{display:flex;align-items:flex-start;gap:4px;margin-bottom:3px;
+      font-size:clamp(9.5px,0.72vw,11.5px);line-height:1.25;}
+  .ev .bar{width:2.5px;border-radius:2px;background:var(--evento);flex:none;align-self:stretch;min-height:11px;}
+  /* título completo: hasta 2 líneas */
+  .ev .ttl{flex:1 1 auto;min-width:0;color:var(--text);overflow:hidden;
+           display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;
+           overflow-wrap:anywhere;}
+  .ev.allday{gap:0;}
+  .ev.allday .bar{display:none;}
+  .ev.allday .ttl{background:var(--evento);color:#fff;border-radius:4px;padding:1px 5px;font-weight:600;}
+  .more{font-size:clamp(9px,0.68vw,11px);color:var(--muted);padding-left:6px;}
+  .cal .empty{color:var(--muted);font-size:13px;padding:26px 2px;text-align:center;line-height:1.5;}
+
+  /* ================= modo compacto (pantallas bajas, p. ej. 800×400) ================= */
+  @media (max-height:540px){
+    body{padding:7px 10px;}
+    header.top{margin-bottom:7px;gap:8px;}
+    .brand{gap:8px;}
+    .brand h1{font-size:16px;}
+    .brand .sub{display:none;}
+    .clock .time{font-size:16px;}
+    .clock .date{font-size:9.5px;}
+
+    .layout{gap:9px;grid-template-columns:minmax(0,0.72fr) minmax(0,1.28fr);}
+    .col-left{gap:7px;}
+
+    .week{padding:6px 9px;border-radius:14px;box-shadow:none;gap:10px;}
+    .wk-lbl{font-size:8px;margin-bottom:6px;letter-spacing:0.05em;}
+    .wk-track{--dot:18px;--linea:3px;}
+    .wk-dot{font-size:9px;box-shadow:0 0 0 2px var(--card);}
+    .wk-pct{font-size:19px;}
+    .wk-tot{font-size:8.5px;margin-top:2px;}
+
+    .rings{gap:7px;}
+    .card{padding:7px 6px;border-radius:14px;gap:4px;box-shadow:none;}
+    .ring-wrap{width:min(76px,15vh);}
+    .ring-center .val{font-size:13px;}
+    .ring-center .pct{font-size:9px;}
+    .meta-name{font-size:11px;}
+    .meta-sub{font-size:9px;}
+
+    .cal{padding:6px 7px;border-radius:14px;box-shadow:none;}
+    .cal-head{margin-bottom:3px;gap:6px;}
+    .cal-head h2{font-size:13px;}
+    .cal-head .tag{font-size:8px;letter-spacing:0.05em;}
+    .dow{margin-bottom:2px;}
+    .dow span{font-size:8px;}
+
+    .grid{border-radius:9px;height:calc(100vh - 96px);grid-auto-rows:minmax(0,1fr);}
+    .cell{min-height:0;padding:1px 2px;}
+    .num{font-size:9px;margin-bottom:1px;}
+    .cell.today .num{width:13px;height:13px;font-size:8.5px;}
+    .ev{font-size:7.5px;gap:2px;margin-bottom:1px;line-height:1.15;}
+    .ev .bar{width:2px;min-height:7px;}
+    .ev.allday .ttl{padding:0 3px;border-radius:3px;}
+    .more{font-size:7px;padding-left:4px;}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <h1>Progreso Semanal · forScore</h1>
+    <span class="sub">Tablero de mandos</span>
+    <span class="ver">v15</span>
+  </div>
+  <div class="clock">
+    <div class="time" id="clock-time">--:--</div>
+    <div class="date" id="clock-date">—</div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="col-left">
+    <section class="week" id="week"></section>
+    <section class="rings" id="rings"></section>
+  </div>
+
+  <section class="cal">
+    <div class="cal-head">
+      <h2 id="cal-month">—</h2>
+      <span class="tag" id="cal-tag">Calendario Casa</span>
+    </div>
+    <div class="dow" id="cal-dow"></div>
+    <div class="grid" id="cal-grid"></div>
+  </section>
+</div>
+
+<script>
+"use strict";
+
+/* ================= METAS ================= */
+const GOALS = [
+  {id:"ensayo",   name:"PIANO · Ensayo",  target:3*3600, color:"var(--m-ensayo)"},
+  {id:"estudio",  name:"PIANO · Estudio", target:3*3600, color:"var(--m-estudio)"},
+  {id:"acordeon", name:"ACORDEÓN",        target:3*3600, color:"var(--m-acordeon)"},
+  {id:"guitarra", name:"GUITARRA",        target:3*3600, color:"var(--m-guitarra)"},
+];
+
+const SEED = [
+  {date:"2026-08-14", ensayo:1*3600+31*60+46, estudio:2*3600+15*60+7, acordeon:37*60+36, guitarra:50*60+1}
+];
+
+/* SIN citas de ejemplo: así, todo lo que se vea viene del calendario de verdad.
+   Si el calendario sale vacío, es que el Atajo no está enviando las citas. */
+const SEED_EVENTS = [];
+
+const STORE_KEY = "forscore_progress_v3";
+const CAL_KEY   = "forscore_cal_v1";
+/* citas visibles por casilla antes de "+N" (menos en pantallas bajas) */
+function maxEventos(){ return window.innerHeight<=540 ? 2 : 3; }
+
+/* ================= almacenamiento ================= */
+function load(key, fallback){
+  try{ const raw=localStorage.getItem(key); if(raw) return JSON.parse(raw); }catch(e){}
+  return JSON.parse(JSON.stringify(fallback));
+}
+function save(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+let DATA   = load(STORE_KEY, SEED);
+let EVENTS = load(CAL_KEY,   SEED_EVENTS);
+
+/* ================= tiempo ================= */
+function parseTime(str){
+  if(str==null) return null; str=String(str).trim(); if(str==="") return null;
+  if(/^\d+$/.test(str)) return parseInt(str,10);
+  const p=str.split(":").map(x=>parseInt(x,10)); if(p.some(isNaN)) return null;
+  if(p.length===2) return p[0]*60+p[1];
+  if(p.length===3) return p[0]*3600+p[1]*60+p[2];
+  return null;
+}
+function fmtTime(sec){
+  if(sec==null) return "—"; sec=Math.round(sec);
+  const h=Math.floor(sec/3600), m=Math.floor((sec%3600)/60), s=sec%60;
+  const pad=n=>String(n).padStart(2,"0");
+  return h>0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+/* solo horas y minutos, sin segundos */
+function fmtHM(sec){
+  if(sec==null) return "—";
+  sec=Math.floor(sec);
+  return `${Math.floor(sec/3600)}:${pad2(Math.floor((sec%3600)/60))}`;
+}
+function fmtTarget(sec){
+  if(sec%3600===0) return (sec/3600)+"h";
+  if(sec%60===0)   return (sec/60)+" min";
+  return fmtTime(sec);
+}
+const pad2=n=>String(n).padStart(2,"0");
+function iso(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; }
+function todayISO(){ const t=new Date(); return iso(t.getFullYear(),t.getMonth()+1,t.getDate()); }
+
+/* ================= anillos ================= */
+function latestEntry(){ return DATA.length ? DATA.slice().sort((a,b)=>a.date<b.date?1:-1)[0] : null; }
+
+/* ---- resumen de la semana: días transcurridos y % sobre el total de las 4 metas ---- */
+const LETRAS_DIA=["L","M","X","J","V","S","D"];
+
+function renderWeek(){
+  const cur=latestEntry();
+  const total=GOALS.reduce((s,g)=>s+((cur&&cur[g.id])||0),0);
+  const objetivo=GOALS.reduce((s,g)=>s+g.target,0);          /* 4 × 3h = 12h */
+  const pct=objetivo>0 ? total/objetivo : 0;
+  const hoy=(new Date().getDay()+6)%7;                        /* 0 = lunes */
+
+  document.getElementById("week").innerHTML=`
+    <div class="wk-left">
+      <div class="wk-lbl">Esta semana</div>
+      <div class="wk-track" style="--p:${(hoy/6).toFixed(4)}">
+        <div class="wk-line"></div>
+        <div class="wk-line fill"></div>
+        <div class="wk-dots">
+          ${LETRAS_DIA.map((L,i)=>
+            `<span class="wk-dot${i<hoy?" on":""}${i===hoy?" hoy":""}">${L}</span>`).join("")}
+        </div>
+      </div>
+    </div>
+    <div class="wk-right">
+      <div class="wk-pct">${Math.round(pct*100)}%</div>
+      <div class="wk-tot">${fmtHM(total)} de ${fmtTarget(objetivo)}</div>
+    </div>`;
+}
+
+function renderRings(){
+  const wrap=document.getElementById("rings"); const cur=latestEntry(); wrap.innerHTML="";
+  GOALS.forEach(g=>{
+    const val=cur?(cur[g.id]??0):0;
+    const pct=g.target>0?val/g.target:0;
+    const pctC=Math.max(0,Math.min(1,pct));
+    const R=54, C=2*Math.PI*R, off=C*(1-pctC);
+    const card=document.createElement("div"); card.className="card";
+    card.innerHTML=`
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120">
+          <circle cx="60" cy="60" r="${R}" fill="none" stroke="var(--track)" stroke-width="11"/>
+          <circle cx="60" cy="60" r="${R}" fill="none" stroke="${g.color}" stroke-width="11"
+            stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"/>
+        </svg>
+        <div class="ring-center">
+          <span class="val">${fmtHM(val)}</span>
+          <span class="pct">${Math.round(pct*100)}%</span>
+        </div>
+      </div>
+      <div class="meta-name">${g.name}</div>
+      <div class="meta-sub">Objetivo ${fmtTarget(g.target)}</div>`;
+    wrap.appendChild(card);
+  });
+}
+
+/* ================= calendario en rejilla ================= */
+const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto",
+             "septiembre","octubre","noviembre","diciembre"];
+const DOW=["lun","mar","mié","jue","vie","sáb","dom"];
+
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+function renderCalendar(){
+  const now=new Date();
+  const y=now.getFullYear(), m=now.getMonth()+1;
+  const hoy=todayISO();
+
+  document.getElementById("cal-month").innerHTML=`${MESES[m-1]} <span class="yr">de ${y}</span>`;
+
+  /* cuántas citas hay cargadas de este mes (ayuda a saber si el Atajo las envió) */
+  const prefijo=`${y}-${pad2(m)}`;
+  const nDelMes=EVENTS.filter(e=>String(e.d||"").startsWith(prefijo)).length;
+  document.getElementById("cal-tag").textContent=
+    `Calendario Casa · ${nDelMes} ${nDelMes===1?"cita":"citas"}`;
+
+  /* cabecera de días (lunes a domingo) */
+  document.getElementById("cal-dow").innerHTML =
+    DOW.map((d,i)=>`<span class="${i>=5?"we":""}">${d}</span>`).join("");
+
+  /* citas del mes agrupadas por fecha */
+  const porDia={};
+  EVENTS.forEach(e=>{
+    const d=String(e.d||"");
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    (porDia[d]=porDia[d]||[]).push(e);
+  });
+  Object.keys(porDia).forEach(k=>{
+    porDia[k].sort((a,b)=>{
+      const at=a.t?a.t:"", bt=b.t?b.t:"";      /* los de todo el día, primero */
+      if(!at && bt) return -1;
+      if(at && !bt) return 1;
+      return at.localeCompare(bt);
+    });
+  });
+
+  /* primer lunes de la rejilla */
+  const primero=new Date(y,m-1,1);
+  const desplaz=(primero.getDay()+6)%7;          /* 0 = lunes */
+  const diasMes=new Date(y,m,0).getDate();
+  const semanas=Math.ceil((desplaz+diasMes)/7);
+
+  const grid=document.getElementById("cal-grid");
+  grid.innerHTML="";
+
+  for(let i=0;i<semanas*7;i++){
+    const fecha=new Date(y,m-1,1-desplaz+i);
+    const fy=fecha.getFullYear(), fm=fecha.getMonth()+1, fd=fecha.getDate();
+    const clave=iso(fy,fm,fd);
+    const fuera=(fm!==m||fy!==y);
+    const finde=(i%7)>=5;
+
+    const cell=document.createElement("div");
+    cell.className="cell"+(finde?" we":"")+(fuera?" out":"")+(clave===hoy?" today":"");
+
+    let html=`<span class="num">${fd}</span>`;
+    const evs=fuera?[]:(porDia[clave]||[]);
+    const tope=maxEventos();
+    evs.slice(0,tope).forEach(e=>{
+      const allday=!e.t;
+      const titulo=esc(e.n||"");
+      const completo=esc((e.t?e.t+" ":"")+(e.n||""));
+      html+=`<div class="ev${allday?" allday":""}" title="${completo}">
+               <span class="bar"></span>
+               <span class="ttl">${titulo}</span>
+             </div>`;
+    });
+    if(evs.length>tope) html+=`<div class="more">+${evs.length-tope}</div>`;
+
+    cell.innerHTML=html;
+    grid.appendChild(cell);
+  }
+}
+
+/* ================= entrada de datos por URL =================
+   Tiempos:  #add=FECHA,ensayo,estudio,acordeon,guitarra
+   Citas:    #cal=YYYY-MM-DD|HH:mm|Título;YYYY-MM-DD|HH:mm|Título;...
+             (hora vacía = evento de todo el día)
+   Combinado: #add=...&cal=...
+========================================================== */
+/* Descodifica el texto de la URL. Safari puede codificarlo dos veces (el "%" de un
+   "%20" se convierte en "%25"), así que se descodifica varias veces hasta que deja
+   de cambiar. Si algo viene mal formado, se devuelve lo último válido. */
+function safeDecode(s){
+  let out=String(s).replace(/\+/g," ");
+  for(let i=0;i<3;i++){
+    if(!/%[0-9A-Fa-f]{2}/.test(out)) break;
+    let dec;
+    try{ dec=decodeURIComponent(out); }catch(e){ break; }
+    if(dec===out) break;
+    out=dec;
+  }
+  return out;
+}
+
+function aplicarDatos(raw){
+  if(!raw) return false;
+  let cambiado=false;
+
+  /* separa solo por "&add=" o "&cal=", así un "&" dentro del título de una cita no rompe nada */
+  const trozos=[];
+  const re=/(?:^|&)(add|cal)=([\s\S]*?)(?=&(?:add|cal)=|$)/gi;
+  let mm;
+  while((mm=re.exec(raw))!==null) trozos.push([mm[1].toLowerCase(), mm[2]]);
+
+  trozos.forEach(([clave,crudo])=>{
+    const valor=safeDecode(crudo);
+
+    if(clave==="add"){
+      const p=valor.split(",").map(s=>s.trim());
+      const entry={date:p[0]||todayISO()};
+      GOALS.forEach((g,k)=>{ const v=parseTime(p[k+1]); if(v!=null) entry[g.id]=v; });
+      const idx=DATA.findIndex(e=>e.date===entry.date);
+      if(idx>=0) DATA[idx]=Object.assign({},DATA[idx],entry); else DATA.push(entry);
+      save(STORE_KEY,DATA); cambiado=true;
+    }
+
+    if(clave==="cal"){
+      const nuevos=[];
+      valor.split(";").forEach(item=>{
+        item=item.trim(); if(!item) return;
+        const f=item.split("|");
+        const d=(f[0]||"").trim();
+        if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+        nuevos.push({d, t:(f[1]||"").trim(), n:(f.slice(2).join("|")||"").trim()});
+      });
+      /* descarta repetidas (una cita puede llegar en dos búsquedas del Atajo) */
+      const vistas=new Set();
+      const unicas=nuevos.filter(e=>{
+        const k=`${e.d}|${e.t}|${e.n}`;
+        if(vistas.has(k)) return false;
+        vistas.add(k); return true;
+      });
+      /* sustituye las citas de los meses recibidos, conserva el resto */
+      const meses=new Set(unicas.map(e=>e.d.slice(0,7)));
+      EVENTS=EVENTS.filter(e=>!meses.has(String(e.d||"").slice(0,7))).concat(unicas);
+      save(CAL_KEY,EVENTS); cambiado=true;
+    }
+  });
+
+  if(cambiado){ renderRings(); renderWeek(); renderCalendar(); }
+  return cambiado;
+}
+
+function handleHash(){
+  const raw=location.hash.replace(/^#/,"");
+  if(!raw) return;
+
+  /* #reset borra lo guardado y deja el panel en blanco */
+  if(/^reset\b/i.test(raw)){
+    try{ localStorage.removeItem(STORE_KEY); localStorage.removeItem(CAL_KEY); }catch(e){}
+    DATA=JSON.parse(JSON.stringify(SEED));
+    EVENTS=[];
+    renderRings(); renderWeek(); renderCalendar();
+    history.replaceState(null,"",location.pathname+location.search);
+    return;
+  }
+
+  aplicarDatos(raw);
+  history.replaceState(null,"",location.pathname+location.search);
+}
+
+/* ---- copia compartida en un gist (para ver el panel en cualquier dispositivo) ----
+   Pega aquí el identificador del gist. Si se deja vacío, todo funciona igual
+   que antes pero los datos solo viven en el navegador donde se abre el enlace. */
+const GIST_ID = "67e43503e86392b72b6e17f0ad71e9c5";
+
+async function cargarRemoto(){
+  if(!GIST_ID) return;
+  try{
+    const r=await fetch(`https://api.github.com/gists/${GIST_ID}`,{cache:"no-store"});
+    if(!r.ok) return;
+    const j=await r.json();
+    const f=(j.files && (j.files["datos.txt"] || Object.values(j.files)[0])) || null;
+    if(!f || !f.content) return;
+    let txt=String(f.content).trim();
+    if(txt.includes("#")) txt=txt.slice(txt.indexOf("#")+1);   /* admite la URL entera */
+    aplicarDatos(txt);
+  }catch(e){ /* sin conexión: se sigue viendo lo último guardado */ }
+}
+
+/* ================= reloj ================= */
+function tickClock(){
+  const t=new Date();
+  document.getElementById("clock-time").textContent=`${pad2(t.getHours())}:${pad2(t.getMinutes())}`;
+  document.getElementById("clock-date").textContent=
+    t.toLocaleDateString("es-ES",{weekday:"long",day:"numeric",month:"long"});
+}
+
+/* ================= init ================= */
+handleHash();
+window.addEventListener("hashchange",handleHash);
+renderRings();
+renderWeek();
+renderCalendar();
+cargarRemoto();                          /* trae la copia compartida, si la hay */
+setInterval(cargarRemoto,5*60*1000);     /* y la refresca cada 5 minutos */
+tickClock(); setInterval(tickClock,15000);
+/* al cambiar el tamaño de la pantalla, recalcula cuántas citas caben */
+let redibujar;
+window.addEventListener("resize",()=>{ clearTimeout(redibujar); redibujar=setTimeout(renderCalendar,150); });
+let ultimoDia=todayISO();
+setInterval(()=>{ if(todayISO()!==ultimoDia){ ultimoDia=todayISO(); renderCalendar(); } },60000);
+</script>
+</body>
+</html>
