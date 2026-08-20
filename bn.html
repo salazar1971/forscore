@@ -206,26 +206,46 @@ function cargarGuardado(){
 var ultimoContenido = "";   /* para no repintar si no ha cambiado nada */
 var ultimoIntento = 0;
 
-function cargarGist(){
-  if (!GIST_ID) return;
+var GIST_USER = "salazar1971";
+var GIST_RAW  = "https://gist.githubusercontent.com/" + GIST_USER + "/" + GIST_ID + "/raw/datos.txt";
+
+function pedir(url, alTerminar){
   try {
     var x = new XMLHttpRequest();
-    x.open("GET", "https://api.github.com/gists/" + GIST_ID + "?t=" + (new Date()).getTime(), true);
+    x.open("GET", url, true);
     x.onreadystatechange = function(){
-      if (x.readyState !== 4 || x.status !== 200) return;
-      try {
-        var j = JSON.parse(x.responseText);
-        var f = j.files && j.files["datos.txt"];
-        if (!f || !f.content) return;
-        /* si el contenido es idéntico, no se toca la pantalla:
-           en tinta electrónica cada repintado cuesta y deja sombras */
-        if (f.content === ultimoContenido) return;
-        ultimoContenido = f.content;
-        if (aplicar(f.content)) pintar();
-      } catch (e) {}
+      if (x.readyState !== 4) return;
+      alTerminar(x.status === 200 ? x.responseText : null);
     };
     x.send(null);
-  } catch (e) {}
+  } catch (e) { alTerminar(null); }
+}
+
+function usarTexto(texto){
+  if (!texto) return;
+  /* si el contenido es idéntico, no se toca la pantalla:
+     en tinta electrónica cada repintado cuesta y deja sombras */
+  if (texto === ultimoContenido) return;
+  ultimoContenido = texto;
+  if (aplicar(texto)) pintar();
+}
+
+/* Primero el archivo en crudo, que NO gasta la cuota de la API de GitHub
+   (60 peticiones por hora y por IP, compartida por todos los aparatos de
+   casa). La API queda solo como reserva. */
+function cargarGist(){
+  if (!GIST_ID) return;
+  pedir(GIST_RAW + "?t=" + (new Date()).getTime(), function(txt){
+    if (txt && txt.replace(/\s/g, "") !== "") { usarTexto(txt); return; }
+    pedir("https://api.github.com/gists/" + GIST_ID + "?t=" + (new Date()).getTime(), function(t2){
+      if (!t2) return;
+      try {
+        var j = JSON.parse(t2);
+        var f = j.files && j.files["datos.txt"];
+        if (f && f.content) usarTexto(f.content);
+      } catch (e) {}
+    });
+  });
 }
 
 /* Se consulta al volver de la suspensión, al recuperar el foco o al tocar
