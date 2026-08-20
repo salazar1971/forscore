@@ -266,12 +266,30 @@ function iso(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; }
 function todayISO(){ const t=new Date(); return iso(t.getFullYear(),t.getMonth()+1,t.getDate()); }
 
 /* ================= anillos ================= */
-function latestEntry(){ return DATA.length ? DATA.slice().sort((a,b)=>a.date<b.date?1:-1)[0] : null; }
+/* Devuelve la lectura más reciente, pero NUNCA una con fecha futura:
+   si por lo que sea quedó guardada una prueba con fecha posterior a hoy,
+   taparía para siempre la lectura buena. */
+function latestEntry(){
+  const hoy=todayISO();
+  const validas=DATA.filter(e=>e && e.date && e.date<=hoy);
+  const lista=validas.length?validas:DATA;
+  return lista.length ? lista.slice().sort((a,b)=>a.date<b.date?1:-1)[0] : null;
+}
+
+/* Muestra en la cabecera de qué lectura vienen los números que se ven.
+   Si aquí no pone la fecha de hoy, el panel está enseñando una lectura vieja. */
+function sello(){
+  const el=document.querySelector(".brand .ver"); if(!el) return;
+  const cur=latestEntry();
+  el.textContent = cur ? cur.date : "sin datos";
+  el.title = cur ? JSON.stringify(cur) : "";
+}
 
 /* ---- resumen de la semana: días transcurridos y % sobre el total de las 4 metas ---- */
 const LETRAS_DIA=["L","M","X","J","V","S","D"];
 
 function renderWeek(){
+  sello();
   const cur=latestEntry();
   const total=GOALS.reduce((s,g)=>s+((cur&&cur[g.id])||0),0);
   const objetivo=GOALS.reduce((s,g)=>s+g.target,0);          /* 4 × 3h = 12h */
@@ -438,8 +456,12 @@ function aplicarDatos(raw){
       const p=valor.split(",").map(s=>s.trim());
       const entry={date:p[0]||todayISO()};
       GOALS.forEach((g,k)=>{ const v=parseTime(p[k+1]); if(v!=null) entry[g.id]=v; });
+      /* SUSTITUYE la lectura de ese día en vez de mezclarla con la anterior.
+         Mezclando, si una lectura vieja tenía un valor en una meta y la nueva
+         no lo trae, se quedaba el viejo y se veían datos de dos momentos
+         distintos mezclados (fue justo lo que pasó con Ensayo). */
       const idx=DATA.findIndex(e=>e.date===entry.date);
-      if(idx>=0) DATA[idx]=Object.assign({},DATA[idx],entry); else DATA.push(entry);
+      if(idx>=0) DATA[idx]=entry; else DATA.push(entry);
       save(STORE_KEY,DATA); cambiado=true;
     }
 
