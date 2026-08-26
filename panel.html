@@ -236,8 +236,19 @@ let DATA   = load(STORE_KEY, SEED);
 let EVENTS = load(CAL_KEY,   SEED_EVENTS);
 
 /* ================= tiempo ================= */
+/* El OCR del iPad se come de vez en cuando los dos puntos y en lugar de
+   "1:33:28" manda "13328". Un número de 4 a 6 cifras se lee como (h)hmmss,
+   siempre que los minutos y los segundos sean válidos. */
+function sinDosPuntos(s){
+  if(!/^\d{4,6}$/.test(s)) return null;
+  const t=s.padStart(6,"0");
+  const h=+t.slice(0,2), m=+t.slice(2,4), sg=+t.slice(4,6);
+  if(m>59 || sg>59) return null;
+  return h*3600+m*60+sg;
+}
 function parseTime(str){
   if(str==null) return null; str=String(str).trim(); if(str==="") return null;
+  const rep=sinDosPuntos(str); if(rep!=null) return rep;
   if(/^\d+$/.test(str)) return parseInt(str,10);
   const p=str.split(":").map(x=>parseInt(x,10)); if(p.some(isNaN)) return null;
   if(p.length===2) return p[0]*60+p[1];

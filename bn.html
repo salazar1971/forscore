@@ -120,10 +120,25 @@ var citas = [];   /* [{d:"2026-08-15", t:"21:00", n:"..."}] */
 /* ---------- utilidades ---------- */
 function pad2(n){ n = String(n); return n.length < 2 ? "0" + n : n; }
 
+/* El OCR se come a veces los dos puntos: "13328" en vez de "1:33:28".
+   Un número de 4 a 6 cifras se lee como (h)hmmss. Escrito a la vieja
+   usanza porque el navegador del Kindle no entiende nada moderno. */
+function sinDosPuntos(s){
+  if (!/^\d{4,6}$/.test(s)) return null;
+  var t = s;
+  while (t.length < 6) t = "0" + t;
+  var h = parseInt(t.substring(0,2), 10);
+  var m = parseInt(t.substring(2,4), 10);
+  var g = parseInt(t.substring(4,6), 10);
+  if (m > 59 || g > 59) return null;
+  return h*3600 + m*60 + g;
+}
 function parseTime(s){
   if (s === null || s === undefined) return null;
   s = String(s).replace(/^\s+|\s+$/g, "");
   if (s === "") return null;
+  var rep = sinDosPuntos(s);
+  if (rep !== null) return rep;
   var p = s.split(":"), n = [], i, v;
   for (i = 0; i < p.length; i++){
     v = parseInt(p[i], 10);

@@ -132,9 +132,18 @@ let lecturas = {};
 
 /* ---------- utilidades ---------- */
 const pad2 = n => String(n).padStart(2,"0");
+/* El OCR se come a veces los dos puntos: "13328" en vez de "1:33:28". */
+function sinDosPuntos(s){
+  if(!/^\d{4,6}$/.test(s)) return null;
+  const t=s.padStart(6,"0");
+  const h=+t.slice(0,2), m=+t.slice(2,4), sg=+t.slice(4,6);
+  if(m>59 || sg>59) return null;
+  return h*3600+m*60+sg;
+}
 function parseTime(s){
   if(s==null) return null;
   s=String(s).trim(); if(!s) return null;
+  const rep=sinDosPuntos(s); if(rep!=null) return rep;
   const p=s.split(":").map(x=>parseInt(x,10));
   if(p.some(isNaN)) return null;
   if(p.length===1) return p[0];
