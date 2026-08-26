@@ -274,6 +274,14 @@ function fmtTarget(sec){
 }
 const pad2=n=>String(n).padStart(2,"0");
 function iso(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; }
+/* lunes de la semana a la que pertenece una fecha "YYYY-MM-DD" */
+function lunesISO(fecha){
+  const p=String(fecha||"").split("-").map(Number);
+  if(p.length!==3 || p.some(isNaN)) return "";
+  const t=new Date(p[0],p[1]-1,p[2]);
+  t.setDate(t.getDate()-((t.getDay()+6)%7));
+  return iso(t.getFullYear(),t.getMonth()+1,t.getDate());
+}
 function todayISO(){ const t=new Date(); return iso(t.getFullYear(),t.getMonth()+1,t.getDate()); }
 
 /* ================= anillos ================= */
@@ -474,6 +482,22 @@ function aplicarDatos(raw){
       const p=valor.split(",").map(s=>s.trim());
       const entry={date:p[0]||todayISO()};
       GOALS.forEach((g,k)=>{ const v=parseTime(p[k+1]); if(v!=null) entry[g.id]=v; });
+
+      /* forScore SOLO ACUMULA dentro de la semana: el contador de una meta
+         nunca puede bajar de lunes a domingo. Así que un valor menor que el
+         que ya teníamos guardado de esa misma semana es una lectura mala del
+         OCR, y nos quedamos con el bueno. Esto atrapa los fallos que parecen
+         una hora perfectamente válida (leer "1:33:23" como "13:23"), que es
+         lo único que ningún patrón puede detectar. */
+      const lunEntry=lunesISO(entry.date);
+      GOALS.forEach(g=>{
+        let previo=0;
+        DATA.forEach(e=>{
+          if(lunesISO(e.date)===lunEntry && e[g.id]!=null && e[g.id]>previo) previo=e[g.id];
+        });
+        if(entry[g.id]==null || entry[g.id]<previo) entry[g.id]=previo;
+      });
+
       /* SUSTITUYE la lectura de ese día en vez de mezclarla con la anterior.
          Mezclando, si una lectura vieja tenía un valor en una meta y la nueva
          no lo trae, se quedaba el viejo y se veían datos de dos momentos
