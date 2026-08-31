@@ -380,9 +380,20 @@ function renderCalendar(){
 
   document.getElementById("cal-month").innerHTML=`${MESES[m-1]} <span class="yr">de ${y}</span>`;
 
-  /* cuántas citas hay cargadas de este mes (ayuda a saber si el Atajo las envió) */
-  const prefijo=`${y}-${pad2(m)}`;
-  const nDelMes=EVENTS.filter(e=>String(e.d||"").startsWith(prefijo)).length;
+  /* Cuántas citas se ven en la rejilla (ayuda a saber si el Atajo las envió).
+     Cuenta el rango completo que se dibuja, no solo los días del mes. */
+  const primeroMes=new Date(y,m-1,1);
+  const desplazIni=(primeroMes.getDay()+6)%7;
+  const diasDelMes=new Date(y,m,0).getDate();
+  const nSemanas=Math.ceil((desplazIni+diasDelMes)/7);
+  const iniRej=new Date(y,m-1,1-desplazIni);
+  const finRej=new Date(y,m-1,1-desplazIni+nSemanas*7-1);
+  const desde=iso(iniRej.getFullYear(),iniRej.getMonth()+1,iniRej.getDate());
+  const hasta=iso(finRej.getFullYear(),finRej.getMonth()+1,finRej.getDate());
+  const nDelMes=EVENTS.filter(e=>{
+    const d=String(e.d||"");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) && d>=desde && d<=hasta;
+  }).length;
   document.getElementById("cal-tag").textContent=
     `Calendario Casa · ${nDelMes} ${nDelMes===1?"cita":"citas"}`;
 
@@ -426,7 +437,12 @@ function renderCalendar(){
     cell.className="cell"+(finde?" we":"")+(fuera?" out":"")+(clave===hoy?" today":"");
 
     let html=`<span class="num">${fd}</span>`;
-    const evs=fuera?[]:(porDia[clave]||[]);
+    /* Las citas se muestran en TODAS las casillas de la rejilla, también en los
+       días del mes anterior o siguiente que completan la primera y la última
+       semana. Una semana no se parte: si la última fila llega al 6 de
+       septiembre, esos días son parte de la semana en curso y sus citas
+       importan igual. */
+    const evs=porDia[clave]||[];
     const tope=maxEventos();
     evs.slice(0,tope).forEach(e=>{
       const allday=!e.t;
