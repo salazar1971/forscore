@@ -385,23 +385,42 @@ const DOW=["lun","mar","mié","jue","vie","sáb","dom"];
 
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
+/* ---- NUESTRO mes: el conjunto de semanas cuyo lunes cae dentro de él ----
+   Es la misma regla que usa el resumen mensual, así que las dos páginas
+   hablan siempre del mismo periodo. Devuelve el lunes de la primera semana
+   y cuántas semanas tiene. */
+function mesDeSemanas(y,m){
+  const primero=new Date(y,m-1,1);
+  let cur=new Date(y,m-1,1-((primero.getDay()+6)%7));   /* lunes de la semana del día 1 */
+  if(cur.getMonth()!==m-1||cur.getFullYear()!==y)       /* si cae en el mes anterior, el siguiente */
+    cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+7);
+  const inicio=new Date(cur);
+  let semanas=0;
+  while(cur.getMonth()===m-1 && cur.getFullYear()===y){
+    semanas++;
+    cur=new Date(cur.getFullYear(),cur.getMonth(),cur.getDate()+7);
+  }
+  return { inicio, semanas };
+}
+
 function renderCalendar(){
-  const now=new Date();
-  const y=now.getFullYear(), m=now.getMonth()+1;
   const hoy=todayISO();
+
+  /* El calendario NO muestra el mes del calendario, sino el nuestro: aquel al
+     que pertenece la semana en curso. Por eso el 1 de septiembre se sigue
+     viendo agosto, que en nuestra cuenta termina el domingo 6. Así el panel y
+     el resumen mensual dicen siempre lo mismo. */
+  const lunHoy=lunesISO(hoy).split("-").map(Number);
+  const y=lunHoy[0], m=lunHoy[1];
 
   document.getElementById("cal-month").innerHTML=`${MESES[m-1]} <span class="yr">de ${y}</span>`;
 
-  /* Cuántas citas se ven en la rejilla (ayuda a saber si el Atajo las envió).
-     Cuenta el rango completo que se dibuja, no solo los días del mes. */
-  const primeroMes=new Date(y,m-1,1);
-  const desplazIni=(primeroMes.getDay()+6)%7;
-  const diasDelMes=new Date(y,m,0).getDate();
-  const nSemanas=Math.ceil((desplazIni+diasDelMes)/7);
-  const iniRej=new Date(y,m-1,1-desplazIni);
-  const finRej=new Date(y,m-1,1-desplazIni+nSemanas*7-1);
-  const desde=iso(iniRej.getFullYear(),iniRej.getMonth()+1,iniRej.getDate());
-  const hasta=iso(finRej.getFullYear(),finRej.getMonth()+1,finRej.getDate());
+  const { inicio, semanas } = mesDeSemanas(y,m);
+  const fin=new Date(inicio.getFullYear(),inicio.getMonth(),inicio.getDate()+semanas*7-1);
+  const desde=iso(inicio.getFullYear(),inicio.getMonth()+1,inicio.getDate());
+  const hasta=iso(fin.getFullYear(),fin.getMonth()+1,fin.getDate());
+
+  /* Cuántas citas se ven en la rejilla (ayuda a saber si el Atajo las envió). */
   const nDelMes=EVENTS.filter(e=>{
     const d=String(e.d||"");
     return /^\d{4}-\d{2}-\d{2}$/.test(d) && d>=desde && d<=hasta;
@@ -429,17 +448,11 @@ function renderCalendar(){
     });
   });
 
-  /* primer lunes de la rejilla */
-  const primero=new Date(y,m-1,1);
-  const desplaz=(primero.getDay()+6)%7;          /* 0 = lunes */
-  const diasMes=new Date(y,m,0).getDate();
-  const semanas=Math.ceil((desplaz+diasMes)/7);
-
   const grid=document.getElementById("cal-grid");
   grid.innerHTML="";
 
   for(let i=0;i<semanas*7;i++){
-    const fecha=new Date(y,m-1,1-desplaz+i);
+    const fecha=new Date(inicio.getFullYear(),inicio.getMonth(),inicio.getDate()+i);
     const fy=fecha.getFullYear(), fm=fecha.getMonth()+1, fd=fecha.getDate();
     const clave=iso(fy,fm,fd);
     const fuera=(fm!==m||fy!==y);
