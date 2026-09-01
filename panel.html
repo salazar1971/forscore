@@ -204,6 +204,18 @@
 <script>
 "use strict";
 
+/* ============================================================
+   Red de seguridad contra la caché. Si alguien abre panel.html
+   directamente (un marcador viejo, un enlace escrito a mano), el
+   navegador puede servir una copia guardada de hace semanas. En ese
+   caso nos vamos solos al lanzador, que añade la marca de tiempo.
+   Como el lanzador siempre pone "t=", no hay bucle posible.
+   ============================================================ */
+if(location.protocol!=="file:" && !/[?&]t=\d/.test(location.search)){
+  const extra=location.search.replace(/^\?/,"");
+  location.replace("./?p=panel"+(extra?"&"+extra:"")+location.hash);
+}
+
 /* ================= METAS ================= */
 const GOALS = [
   {id:"ensayo",   name:"PIANO · Ensayo",  target:3*3600, color:"var(--m-ensayo)"},

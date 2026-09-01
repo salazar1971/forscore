@@ -114,6 +114,19 @@
 <script>
 "use strict";
 
+/* ============================================================
+   Red de seguridad contra la caché. Si alguien abre mes.html
+   directamente (un marcador viejo, un enlace escrito a mano), el
+   navegador puede servir una copia guardada de hace semanas. En ese
+   caso nos vamos solos al lanzador, que añade la marca de tiempo y
+   obliga a descargar la versión buena. Como el lanzador siempre pone
+   "t=", en la segunda vuelta esto ya no se dispara: no hay bucle.
+   ============================================================ */
+if(location.protocol!=="file:" && !/[?&]t=\d/.test(location.search)){
+  const extra=location.search.replace(/^\?/,"");
+  location.replace("./?p=mes"+(extra?"&"+extra:"")+location.hash);
+}
+
 const GIST_ID = "67e43503e86392b72b6e17f0ad71e9c5";
 
 const GOALS = [
