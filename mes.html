@@ -250,8 +250,12 @@ function barra(valor, objetivo, color){
 function mesPedido(){
   const q=/[?&]mes=(\d{4})-(\d{2})/.exec(location.search);
   if(q) return { y:+q[1], m:+q[2] };
-  const h=new Date();
-  return { y:h.getFullYear(), m:h.getMonth()+1 };
+  /* Por defecto NO se abre el mes del calendario, sino el mes al que pertenece
+     la semana en curso: el que contiene su lunes. Si no, del 1 al 6 de
+     septiembre se abriría septiembre —todavía vacío— mientras los datos de
+     esos días están guardados en agosto. */
+  const lun=lunesDe(iso(new Date()));
+  return { y:lun.getFullYear(), m:lun.getMonth()+1 };
 }
 
 function pintar(){
@@ -311,9 +315,21 @@ function pintar(){
 
   /* --- tabla de semanas --- */
   if(!conDatos.length){
-    document.getElementById("tabla").innerHTML =
-      `<div class="aviso">Todavía no hay datos guardados de este mes.<br>
-       El histórico empieza a acumularse en cuanto el atajo escriba la copia semanal.</div>`;
+    /* Si la primera semana del mes aún no ha llegado, decirlo con la fecha:
+       los ceros son correctos, no un fallo, y conviene que se note. */
+    const primeraSem = semanas.length ? semanas[0].lunes : null;
+    const hoyD = new Date(); hoyD.setHours(0,0,0,0);
+    let texto;
+    if(primeraSem && primeraSem>hoyD){
+      texto = `Este mes todavía no ha empezado.<br>` +
+              `Su primera semana arranca el lunes ${primeraSem.getDate()} de ` +
+              `${MESES[primeraSem.getMonth()]}; hasta entonces, los días de esta ` +
+              `semana cuentan en ${MESES[(m-2+12)%12]}.`;
+    } else {
+      texto = `Todavía no hay datos guardados de este mes.<br>` +
+              `El histórico empieza a acumularse en cuanto el atajo escriba la copia semanal.`;
+    }
+    document.getElementById("tabla").innerHTML = `<div class="aviso">${texto}</div>`;
     return;
   }
 
