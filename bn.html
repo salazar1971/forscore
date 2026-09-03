@@ -123,6 +123,9 @@ var citas = [];   /* [{d:"2026-08-15", t:"21:00", n:"..."}] */
    falso sería indistinguible de una semana sin tocar el piano. */
 var hayDatos = false;
 
+/* mientras arranca no se pinta a medias: se pinta una sola vez, al final */
+var arrancando = true;
+
 /* ---------- utilidades ---------- */
 function pad2(n){ n = String(n); return n.length < 2 ? "0" + n : n; }
 
@@ -236,16 +239,35 @@ var ultimoIntento = 0;
 var GIST_USER = "salazar1971";
 var GIST_RAW  = "https://gist.githubusercontent.com/" + GIST_USER + "/" + GIST_ID + "/raw/datos.txt";
 
-function pedir(url, alTerminar){
+/* Qué ha pasado con la última descarga. Se enseña en la cabecera cuando no
+   hay datos, para que el propio aparato cuente por qué está en blanco:
+   "E0" = ni siquiera hubo respuesta (red cortada o CORS), "E404" = no está,
+   "vacio" = respondió pero sin contenido, "pendiente" = aún no ha vuelto. */
+var estadoRed = "pendiente";
+
+/* La primera descarga se pide SÍNCRONA a propósito. El servidor de TRMNL
+   fotografía la página en cuanto termina de cargar, y una petición normal
+   (asíncrona) todavía va por el camino en ese momento: salía la pantalla con
+   rayas. Una petición síncrona frena la carga hasta que los datos están
+   dentro, así que la foto ya los pilla. Las siguientes son asíncronas. */
+function pedir(url, alTerminar, sincrono){
+  var x;
   try {
-    var x = new XMLHttpRequest();
-    x.open("GET", url, true);
+    x = new XMLHttpRequest();
+    x.open("GET", url, !sincrono);
+    if (sincrono){
+      x.send(null);
+      if (x.status === 200){ estadoRed = "ok"; alTerminar(x.responseText); }
+      else { estadoRed = "E" + x.status; alTerminar(null); }
+      return;
+    }
     x.onreadystatechange = function(){
       if (x.readyState !== 4) return;
-      alTerminar(x.status === 200 ? x.responseText : null);
+      if (x.status === 200){ estadoRed = "ok"; alTerminar(x.responseText); }
+      else { estadoRed = "E" + x.status; alTerminar(null); }
     };
     x.send(null);
-  } catch (e) { alTerminar(null); }
+  } catch (e) { estadoRed = "E0"; alTerminar(null); }
 }
 
 function usarTexto(texto){
@@ -254,25 +276,26 @@ function usarTexto(texto){
      en tinta electrónica cada repintado cuesta y deja sombras */
   if (texto === ultimoContenido) return;
   ultimoContenido = texto;
-  if (aplicar(texto)) pintar();
+  if (aplicar(texto) && !arrancando) pintar();
 }
 
 /* Primero el archivo en crudo, que NO gasta la cuota de la API de GitHub
    (60 peticiones por hora y por IP, compartida por todos los aparatos de
    casa). La API queda solo como reserva. */
-function cargarGist(){
+function cargarGist(sincrono){
   if (!GIST_ID) return;
   pedir(GIST_RAW + "?t=" + (new Date()).getTime(), function(txt){
     if (txt && txt.replace(/\s/g, "") !== "") { usarTexto(txt); return; }
+    if (estadoRed === "ok") estadoRed = "vacio";
     pedir("https://api.github.com/gists/" + GIST_ID + "?t=" + (new Date()).getTime(), function(t2){
       if (!t2) return;
       try {
         var j = JSON.parse(t2);
         var f = j.files && j.files["datos.txt"];
         if (f && f.content) usarTexto(f.content);
-      } catch (e) {}
-    });
-  });
+      } catch (e) { estadoRed = "json"; }
+    }, sincrono);
+  }, sincrono);
 }
 
 /* Se consulta al volver de la suspensión, al recuperar el foco o al tocar
@@ -281,7 +304,7 @@ function refrescar(){
   var ahora = (new Date()).getTime();
   if (ahora - ultimoIntento < 20000) return;
   ultimoIntento = ahora;
-  cargarGist();
+  cargarGist(false);
 }
 
 function alEvento(obj, nombre, fn){
@@ -314,7 +337,8 @@ function pintar(){
   var ahora = new Date();
   var hoy = (ahora.getDay() + 6) % 7;
   document.getElementById("upd").innerHTML =
-    "actualizado " + pad2(ahora.getHours()) + ":" + pad2(ahora.getMinutes());
+    "actualizado " + pad2(ahora.getHours()) + ":" + pad2(ahora.getMinutes()) +
+    (hayDatos ? "" : " · sin datos (" + estadoRed + ")");
 
   /* --- días: 7 celdas iguales, el círculo centrado en cada una --- */
   document.getElementById("track").style.height = M.alto + "px";
@@ -425,9 +449,10 @@ function pintarCitas(M, ahora, hoy){
 /* ---------- arranque ---------- */
 cargarGuardado();
 if (location.hash) aplicar(location.hash);
+cargarGist(true);      /* síncrona: la foto del TRMNL no puede adelantarse */
+arrancando = false;
 pintar();
-cargarGist();
-setInterval(cargarGist, 5*60*1000);
+setInterval(function(){ cargarGist(false); }, 5*60*1000);
 
 /* al despertar el aparato o volver a la página, comprobar en el acto */
 alEvento(window, "focus", refrescar);
