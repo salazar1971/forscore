@@ -312,6 +312,27 @@ function alEvento(obj, nombre, fn){
   else if (obj.attachEvent) obj.attachEvent("on" + nombre, fn);
 }
 
+/* El servidor de TRMNL dibuja la página en Alemania y con el reloj en UTC,
+   así que marcaba dos horas menos y, de madrugada, habría señalado el día
+   equivocado en la semana y en el calendario. Aquí se fuerza la hora de
+   Madrid; si el navegador es demasiado antiguo para entender de husos
+   (el del Kindle), se queda con su hora local, que allí ya es la de casa. */
+function ahoraEnCasa(){
+  var d = new Date();
+  try {
+    if (typeof Intl === "object" && Intl.DateTimeFormat){
+      var s = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Europe/Madrid",
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", hour12: false
+      }).format(d);
+      var m = /(\d{4})-(\d{2})-(\d{2})\D+(\d{1,2}):(\d{2})/.exec(s);
+      if (m) return new Date(+m[1], +m[2]-1, +m[3], +m[4] % 24, +m[5]);
+    }
+  } catch (e) {}
+  return d;
+}
+
 /* ---------- medidas según el alto de pantalla ---------- */
 function medidas(){
   var h = (window.innerHeight || 600);
@@ -334,7 +355,7 @@ function pintar(){
   elPct.innerHTML = hayDatos ? (Math.round(pct*100) + "%") : "—";
   document.getElementById("tot").innerHTML = fmtHM(total) + " de " + fmtObjetivo(objetivo);
 
-  var ahora = new Date();
+  var ahora = ahoraEnCasa();
   var hoy = (ahora.getDay() + 6) % 7;
   document.getElementById("upd").innerHTML =
     "actualizado " + pad2(ahora.getHours()) + ":" + pad2(ahora.getMinutes()) +
