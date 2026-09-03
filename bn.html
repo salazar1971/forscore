@@ -117,6 +117,12 @@ var CLAVE = "forscore_bn_v1";
 var datos = { ensayo:0, estudio:0, acordeon:0, guitarra:0 };
 var citas = [];   /* [{d:"2026-08-15", t:"21:00", n:"..."}] */
 
+/* ¿Tenemos algún dato de verdad, de la caché o de la descarga? Mientras no lo
+   haya, los tiempos se muestran como "—" y no como "0:00". Importa para el
+   TRMNL: su servidor abre la página desde cero, sin nada guardado, y un cero
+   falso sería indistinguible de una semana sin tocar el piano. */
+var hayDatos = false;
+
 /* ---------- utilidades ---------- */
 function pad2(n){ n = String(n); return n.length < 2 ? "0" + n : n; }
 
@@ -151,12 +157,18 @@ function parseTime(s){
   return null;
 }
 function fmtHM(sec){
+  if (!hayDatos) return "—";
+  sec = Math.floor(sec || 0);
+  return Math.floor(sec/3600) + ":" + pad2(Math.floor((sec % 3600)/60));
+}
+/* los objetivos son constantes nuestras, se escriben siempre */
+function fmtHMfijo(sec){
   sec = Math.floor(sec || 0);
   return Math.floor(sec/3600) + ":" + pad2(Math.floor((sec % 3600)/60));
 }
 function fmtObjetivo(sec){
   if (sec % 3600 === 0) return (sec/3600) + "h";
-  return fmtHM(sec);
+  return fmtHMfijo(sec);
 }
 function decode(s){
   var out = String(s).replace(/\+/g, " "), i, dec;
@@ -181,7 +193,7 @@ function aplicar(texto){
     var partes = decode(m[1]).split(",");
     for (i = 0; i < GOALS.length; i++){
       v = parseTime(partes[i+1]);
-      if (v !== null){ datos[GOALS[i].id] = v; hubo = true; }
+      if (v !== null){ datos[GOALS[i].id] = v; hubo = true; hayDatos = true; }
     }
   }
 
@@ -214,8 +226,8 @@ function cargarGuardado(){
     var s = localStorage.getItem(CLAVE);
     if (!s) return;
     var o = JSON.parse(s);
-    if (o && o.t){ datos = o.t; citas = o.c || []; }
-    else if (o) { datos = o; }        /* formato antiguo */
+    if (o && o.t){ datos = o.t; citas = o.c || []; hayDatos = true; }
+    else if (o) { datos = o; hayDatos = true; }        /* formato antiguo */
   } catch (e) {}
 }
 var ultimoContenido = "";   /* para no repintar si no ha cambiado nada */
@@ -296,7 +308,7 @@ function pintar(){
 
   var elPct = document.getElementById("pct");
   elPct.style.fontSize = M.big + "px";
-  elPct.innerHTML = Math.round(pct*100) + "%";
+  elPct.innerHTML = hayDatos ? (Math.round(pct*100) + "%") : "—";
   document.getElementById("tot").innerHTML = fmtHM(total) + " de " + fmtObjetivo(objetivo);
 
   var ahora = new Date();
@@ -341,7 +353,7 @@ function pintar(){
              '<div class="rmid"><div>' +
                '<div class="val" style="font-size:' + M.val + 'px">' + fmtHM(val) + '</div>' +
                '<div class="pc" style="font-size:' + M.pc + 'px">' +
-                  Math.round((val/g.target)*100) + '%</div>' +
+                  (hayDatos ? Math.round((val/g.target)*100) + '%' : '') + '</div>' +
              '</div></div>' +
            '</div>' +
            '<div class="name" style="font-size:' + M.nom + 'px">' + g.name + '</div>' +
