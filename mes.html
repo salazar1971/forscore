@@ -157,9 +157,11 @@ function parseTime(s){
   if(s==null) return null;
   s=String(s).trim(); if(!s) return null;
   const rep=sinDosPuntos(s); if(rep!=null) return rep;
+  /* número suelto que sinDosPuntos() no ha sabido reparar = OCR ilegible.
+     Nunca se toma como segundos a pelo: "17206" era 1:17:05 y salía 4:46. */
+  if(/^\d+$/.test(s)) return null;
   const p=s.split(":").map(x=>parseInt(x,10));
   if(p.some(isNaN)) return null;
-  if(p.length===1) return p[0];
   if(p.length===2) return p[0]*60+p[1];
   if(p.length===3) return p[0]*3600+p[1]*60+p[2];
   return null;

@@ -126,6 +126,10 @@ var hayDatos = false;
 /* mientras arranca no se pinta a medias: se pinta una sola vez, al final */
 var arrancando = true;
 
+/* Y meta por meta: si el OCR dejó una ilegible, esa sale con raya en vez de
+   un 0:00 que diría, mintiendo, que ese día no se tocó. */
+var tengo = { ensayo:false, estudio:false, acordeon:false, guitarra:false };
+
 /* ---------- utilidades ---------- */
 function pad2(n){ n = String(n); return n.length < 2 ? "0" + n : n; }
 
@@ -148,6 +152,12 @@ function parseTime(s){
   if (s === "") return null;
   var rep = sinDosPuntos(s);
   if (rep !== null) return rep;
+  /* Un número suelto solo puede venir de un OCR que se comió los dos puntos.
+     Si sinDosPuntos() no ha sabido repararlo (minutos o segundos por encima
+     de 59), es que además leyó mal alguna cifra: se da por ilegible y se
+     devuelve null. Antes se tomaba como segundos a pelo y salía un
+     disparate: "17206", que era 1:17:05, se pintaba como 4:46. */
+  if (/^\d+$/.test(s)) return null;
   var p = s.split(":"), n = [], i, v;
   for (i = 0; i < p.length; i++){
     v = parseInt(p[i], 10);
@@ -196,7 +206,10 @@ function aplicar(texto){
     var partes = decode(m[1]).split(",");
     for (i = 0; i < GOALS.length; i++){
       v = parseTime(partes[i+1]);
-      if (v !== null){ datos[GOALS[i].id] = v; hubo = true; hayDatos = true; }
+      if (v !== null){
+        datos[GOALS[i].id] = v; tengo[GOALS[i].id] = true;
+        hubo = true; hayDatos = true;
+      }
     }
   }
 
@@ -231,6 +244,7 @@ function cargarGuardado(){
     var o = JSON.parse(s);
     if (o && o.t){ datos = o.t; citas = o.c || []; hayDatos = true; }
     else if (o) { datos = o; hayDatos = true; }        /* formato antiguo */
+    if (hayDatos){ for (var k = 0; k < GOALS.length; k++) tengo[GOALS[k].id] = true; }
   } catch (e) {}
 }
 var ultimoContenido = "";   /* para no repintar si no ha cambiado nada */
@@ -396,9 +410,10 @@ function pintar(){
                '</g>' +
              '</svg>' +
              '<div class="rmid"><div>' +
-               '<div class="val" style="font-size:' + M.val + 'px">' + fmtHM(val) + '</div>' +
+               '<div class="val" style="font-size:' + M.val + 'px">' +
+                  (tengo[g.id] ? fmtHM(val) : '—') + '</div>' +
                '<div class="pc" style="font-size:' + M.pc + 'px">' +
-                  (hayDatos ? Math.round((val/g.target)*100) + '%' : '') + '</div>' +
+                  (hayDatos && tengo[g.id] ? Math.round((val/g.target)*100) + '%' : '') + '</div>' +
              '</div></div>' +
            '</div>' +
            '<div class="name" style="font-size:' + M.nom + 'px">' + g.name + '</div>' +
