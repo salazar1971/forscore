@@ -261,7 +261,12 @@ function sinDosPuntos(s){
 function parseTime(str){
   if(str==null) return null; str=String(str).trim(); if(str==="") return null;
   const rep=sinDosPuntos(str); if(rep!=null) return rep;
-  if(/^\d+$/.test(str)) return parseInt(str,10);
+  /* Un número suelto solo puede venir de un OCR que se comió los dos puntos.
+     Si sinDosPuntos() no supo repararlo (minutos o segundos por encima de 59),
+     es que además leyó mal alguna cifra: ilegible. Antes se tomaba como
+     segundos a pelo y salía un disparate: "17206", que era 1:17:05, se
+     pintaba como 4:46. */
+  if(/^\d+$/.test(str)) return null;
   const p=str.split(":").map(x=>parseInt(x,10)); if(p.some(isNaN)) return null;
   if(p.length===2) return p[0]*60+p[1];
   if(p.length===3) return p[0]*3600+p[1]*60+p[2];
