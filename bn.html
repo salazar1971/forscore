@@ -7,36 +7,41 @@
 <style>
   /* Pensado para tinta electrónica: sin color, contraste alto, trazos gruesos.
      Maquetación y código conservadores para que también los entiendan
-     los navegadores antiguos (como el del Kindle). */
+     los navegadores antiguos (como el del Kindle).
+
+     PALETA: el TRMNL en 2 bits solo imprime sólidos estos cuatro tonos:
+       #000000   #555555   #AAAAAA   #FFFFFF
+     Cualquier otro gris lo simula el servidor con tramado, y en pantalla
+     se ve granulado. No meter aquí ningún gris que no sea uno de esos. */
   html, body { margin:0; padding:0; background:#ffffff; color:#000000; }
   body { font-family: Helvetica, Arial, sans-serif; -webkit-text-size-adjust:100%; }
   .wrap { padding: 12px 16px; }
 
   .head { border-bottom: 3px solid #000; padding-bottom: 7px; margin-bottom: 12px; }
   .head h1 { margin:0; font-size:25px; font-weight:bold; display:inline-block; }
-  .head .upd { float:right; font-size:13px; color:#555; padding-top:9px; }
+  .head .upd { float:right; font-size:13px; color:#555555; padding-top:9px; }
 
   /* ---------- semana ---------- */
-  .lbl { font-size:11px; letter-spacing:1.5px; color:#555; margin-bottom:6px; }
+  .lbl { font-size:11px; letter-spacing:1.5px; color:#555555; margin-bottom:6px; }
   .wcol { display:inline-block; vertical-align:middle; }
   .wcol-a { width:70%; }
   .wcol-b { width:29%; text-align:right; }
 
   .track { position:relative; }
   .line, .line-on { position:absolute; top:50%; margin-top:-2px; height:4px; }
-  .line    { left:7.14%; right:7.14%; background:#c0c0c0; }
+  .line    { left:7.14%; right:7.14%; background:#AAAAAA; }
   .line-on { left:7.14%; background:#000000; }
 
   .dots { position:relative; font-size:0; white-space:nowrap; }
   .cell { display:inline-block; width:14.28%; text-align:center; vertical-align:middle; }
   .dot  { display:inline-block; border-radius:50%; box-sizing:border-box;
-          background:#ffffff; color:#666666; border:3px solid #b8b8b8;
+          background:#ffffff; color:#555555; border:3px solid #AAAAAA;
           font-family: Helvetica, Arial, sans-serif; font-weight:bold; }
   .dot.on  { background:#000000; color:#ffffff; border-color:#000000; }
   .dot.hoy { background:#000000; color:#ffffff; border-color:#000000; }
 
   .big { font-size:44px; font-weight:bold; line-height:1; letter-spacing:-1px; }
-  .sub { font-size:15px; color:#333; margin-top:3px; }
+  .sub { font-size:15px; color:#555555; margin-top:3px; }
 
   /* ---------- anillos ---------- */
   .rings { font-size:0; margin-top:14px; }
@@ -47,20 +52,20 @@
   .rmid > div { display:table-cell; vertical-align:middle; text-align:center; }
   .val { font-size:32px; font-weight:bold; letter-spacing:-1px; line-height:1.05;
          font-family: Helvetica, Arial, sans-serif; }
-  .pc  { font-size:15px; color:#444; font-family: Helvetica, Arial, sans-serif; }
+  .pc  { font-size:15px; color:#555555; font-family: Helvetica, Arial, sans-serif; }
   .name { font-size:17px; font-weight:bold; margin-top:5px;
           font-family: Helvetica, Arial, sans-serif; }
-  .goal { font-size:13px; color:#444; margin-top:1px;
+  .goal { font-size:13px; color:#555555; margin-top:1px;
           font-family: Helvetica, Arial, sans-serif; }
 
   /* ---------- citas de la semana, en tabla de lunes a domingo ---------- */
   .evs { margin-top:8px; }
   table.wk { width:100%; border-collapse:collapse; table-layout:fixed; }
-  table.wk td { border:1px solid #bbbbbb; vertical-align:top; padding:3px 4px; }
-  table.wk td.we { background:#e7e7e7; }
+  table.wk td { border:1px solid #AAAAAA; vertical-align:top; padding:3px 4px; }
+  table.wk td.we { background:#AAAAAA; }
   table.wk tr.dows td { border:0; text-align:center; padding:0 0 3px;
                         color:#555555; font-weight:normal; }
-  table.wk tr.dows td.we { background:transparent; color:#8a8a8a; }
+  table.wk tr.dows td.we { background:transparent; color:#555555; }
   .dhead { margin-bottom:3px; white-space:nowrap; }
   .dnum { font-weight:bold; color:#000; }
   .dnum.hoy { display:inline-block; background:#000000; color:#ffffff;
@@ -403,7 +408,9 @@ function pintar(){
            '<div class="rbox" style="width:' + M.anillo + 'px;height:' + M.anillo + 'px">' +
              '<svg viewBox="0 0 120 120">' +
                '<g transform="rotate(-90 60 60)">' +
-                 '<circle cx="60" cy="60" r="' + R + '" fill="none" stroke="#cccccc" stroke-width="14"/>' +
+                 /* #AAAAAA es uno de los cuatro tonos que el panel imprime
+                    sólidos en 2 bits; con #cccccc el servidor lo trama */
+                 '<circle cx="60" cy="60" r="' + R + '" fill="none" stroke="#AAAAAA" stroke-width="14"/>' +
                  '<circle cx="60" cy="60" r="' + R + '" fill="none" stroke="#000000" stroke-width="14"' +
                         ' stroke-dasharray="' + C.toFixed(1) + '"' +
                         ' stroke-dashoffset="' + off.toFixed(1) + '"/>' +
