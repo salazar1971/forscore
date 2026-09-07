@@ -93,6 +93,7 @@
   .pin{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;
        vertical-align:baseline;}
   .sem{white-space:nowrap;}
+  .sem .num{font-weight:600;}
   .sem .rot{color:var(--muted);font-size:0.85em;margin-left:6px;}
   .aviso{color:var(--muted);font-size:13px;line-height:1.6;padding:26px 4px;text-align:center;}
 </style>
@@ -222,6 +223,18 @@ async function cargar(){
 }
 function cargarCache(){
   try{ const s=localStorage.getItem(CACHE); if(s) lecturas=JSON.parse(s); }catch(e){}
+}
+
+/* Número de semana ISO (la que empieza en lunes y cuya semana 1 es la del
+   primer jueves del año). Es el mismo número que usa el atajo para nombrar
+   las copias del gist, sYYYY-ww.txt, así que la fila de la tabla y el
+   archivo del histórico se llaman igual. */
+function semanaISO(d){
+  const t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  t.setDate(t.getDate() + 3 - ((t.getDay() + 6) % 7));      /* jueves de esa semana */
+  const ene4 = new Date(t.getFullYear(), 0, 4);
+  ene4.setDate(ene4.getDate() + 3 - ((ene4.getDay() + 6) % 7));
+  return 1 + Math.round((t - ene4) / 604800000);
 }
 
 /* ---------- agrupar por semana ---------- */
@@ -363,7 +376,7 @@ function pintar(){
     }).join("");
     const objSem = GOALS.reduce((a,g)=>a+g.target,0);
     return `<tr class="${esActual?"actual":""}">
-      <td class="sem">Semana ${rot}${esActual?' <span class="rot">· en curso</span>':''}</td>
+      <td class="sem"><span class="num">Semana ${semanaISO(s.lunes)}</span><span class="rot">· ${rot}</span>${esActual?' <span class="rot">· en curso</span>':''}</td>
       ${celdas}
       <td class="tot">${hay
         ? `<span class="val">${fmtHM(suma)}<span class="pc">${Math.round(suma/objSem*100)}%</span></span>${barra(suma, objSem)}`
