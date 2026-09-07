@@ -85,7 +85,7 @@
     <span class="upd" id="upd">&nbsp;</span>
   </div>
 
-  <div class="lbl">ESTA SEMANA</div>
+  <div class="lbl" id="lbl">ESTA SEMANA</div>
   <div>
     <div class="wcol wcol-a">
       <div class="track" id="track">
@@ -355,6 +355,16 @@ function ahoraEnCasa(){
   return d;
 }
 
+/* Número de semana ISO, el mismo que el resumen mensual y el que usa el
+   atajo para nombrar las copias del gist. A la vieja usanza, para el Kindle. */
+function semanaISO(d){
+  var t = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  t.setDate(t.getDate() + 3 - ((t.getDay() + 6) % 7));       /* jueves de esa semana */
+  var ene4 = new Date(t.getFullYear(), 0, 4);
+  ene4.setDate(ene4.getDate() + 3 - ((ene4.getDay() + 6) % 7));
+  return 1 + Math.round((t - ene4) / 604800000);
+}
+
 /* ---------- medidas según el alto de pantalla ---------- */
 function medidas(){
   var h = (window.innerHeight || 600);
@@ -379,6 +389,7 @@ function pintar(){
 
   var ahora = ahoraEnCasa();
   var hoy = (ahora.getDay() + 6) % 7;
+  document.getElementById("lbl").innerHTML = "ESTA SEMANA · S" + semanaISO(ahora);
   document.getElementById("upd").innerHTML =
     "actualizado " + pad2(ahora.getHours()) + ":" + pad2(ahora.getMinutes()) +
     (hayDatos ? "" : " · sin datos (" + estadoRed + ")");

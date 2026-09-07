@@ -18,6 +18,7 @@
     --border:     #e6e7eb;
     --grid:       #dfe1e6;
     --weekend:    #fafbfc;
+    --colsem:     clamp(26px,2.2vw,36px);
     --m-ensayo:   #1a7f4b;
     --m-estudio:  #43c46f;
     --m-acordeon: #2a78d6;
@@ -97,14 +98,19 @@
   .cal-head h2 .yr{color:var(--muted);font-weight:400;}
   .cal-head .tag{font-size:10.5px;letter-spacing:0.07em;text-transform:uppercase;color:var(--muted);}
 
-  .dow{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));margin-bottom:5px;}
+  /* la primera columna, estrecha, es la del número de semana */
+  .dow{display:grid;grid-template-columns:var(--colsem) repeat(7,minmax(0,1fr));margin-bottom:5px;}
   .dow span{text-align:center;font-size:clamp(10px,0.8vw,12.5px);color:var(--muted);
             text-transform:lowercase;letter-spacing:0.02em;}
   .dow span.we{color:#a9adb5;}
 
-  .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+  .grid{display:grid;grid-template-columns:var(--colsem) repeat(7,minmax(0,1fr));
         gap:1px;background:var(--grid);border:1px solid var(--grid);border-radius:12px;overflow:hidden;}
   .cell{background:var(--card);min-height:clamp(62px,8.5vh,108px);padding:5px 5px 6px;overflow:hidden;}
+  .wknum{background:var(--card-2);display:flex;align-items:center;justify-content:center;
+         font-size:clamp(9px,0.7vw,11px);font-weight:600;color:var(--muted);
+         font-variant-numeric:tabular-nums;letter-spacing:0.01em;}
+  .wknum.actual{color:var(--hoy);}
   .cell.we{background:var(--weekend);}
   .cell.out{background:#fbfbfc;}
   .cell.out .num{color:#c3c7ce;}
@@ -154,7 +160,8 @@
     .meta-name{font-size:11px;}
     .meta-sub{font-size:9px;}
 
-    .cal{padding:6px 7px;border-radius:14px;box-shadow:none;}
+    .cal{padding:6px 7px;border-radius:14px;box-shadow:none;--colsem:19px;}
+    .wknum{font-size:7.5px;}
     .cal-head{margin-bottom:3px;gap:6px;}
     .cal-head h2{font-size:13px;}
     .cal-head .tag{font-size:8px;letter-spacing:0.05em;}
@@ -291,6 +298,17 @@ function fmtTarget(sec){
 }
 const pad2=n=>String(n).padStart(2,"0");
 function iso(y,m,d){ return `${y}-${pad2(m)}-${pad2(d)}`; }
+/* Número de semana ISO. Es el mismo que usa el atajo para nombrar las copias
+   del gist (sYYYY-ww.txt) y el que enseña el resumen mensual, así que las
+   tres cosas hablan de la misma semana. */
+function semanaISO(d){
+  const t=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  t.setDate(t.getDate()+3-((t.getDay()+6)%7));            /* jueves de esa semana */
+  const ene4=new Date(t.getFullYear(),0,4);
+  ene4.setDate(ene4.getDate()+3-((ene4.getDay()+6)%7));
+  return 1+Math.round((t-ene4)/604800000);
+}
+
 /* lunes de la semana a la que pertenece una fecha "YYYY-MM-DD" */
 function lunesISO(fecha){
   const p=String(fecha||"").split("-").map(Number);
@@ -439,7 +457,7 @@ function renderCalendar(){
     `Calendario Casa · ${nDelMes} ${nDelMes===1?"cita":"citas"}`;
 
   /* cabecera de días (lunes a domingo) */
-  document.getElementById("cal-dow").innerHTML =
+  document.getElementById("cal-dow").innerHTML = `<span></span>` +
     DOW.map((d,i)=>`<span class="${i>=5?"we":""}">${d}</span>`).join("");
 
   /* citas del mes agrupadas por fecha */
@@ -467,6 +485,15 @@ function renderCalendar(){
     const clave=iso(fy,fm,fd);
     const fuera=(fm!==m||fy!==y);
     const finde=(i%7)>=5;
+
+    /* cada fila empieza por su número de semana (ISO, el mismo que el
+       resumen mensual y el que nombra las copias del gist) */
+    if(i%7===0){
+      const ws=document.createElement("div");
+      ws.className="wknum"+(lunesISO(clave)===lunesISO(hoy)?" actual":"");
+      ws.textContent="S"+semanaISO(fecha);
+      grid.appendChild(ws);
+    }
 
     const cell=document.createElement("div");
     cell.className="cell"+(finde?" we":"")+(fuera?" out":"")+(clave===hoy?" today":"");
