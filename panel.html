@@ -201,7 +201,7 @@
   <section class="cal">
     <div class="cal-head">
       <h2 id="cal-month">—</h2>
-      <span class="tag" id="cal-tag">Calendario Casa</span>
+      <span class="tag" id="cal-tag">Calendario Práctica</span>
     </div>
     <div class="dow" id="cal-dow"></div>
     <div class="grid" id="cal-grid"></div>
@@ -454,7 +454,7 @@ function renderCalendar(){
     return /^\d{4}-\d{2}-\d{2}$/.test(d) && d>=desde && d<=hasta;
   }).length;
   document.getElementById("cal-tag").textContent=
-    `Calendario Casa · ${nDelMes} ${nDelMes===1?"cita":"citas"}`;
+    `Calendario Práctica · ${nDelMes} ${nDelMes===1?"cita":"citas"}`;
 
   /* cabecera de días (lunes a domingo) */
   document.getElementById("cal-dow").innerHTML = `<span></span>` +
