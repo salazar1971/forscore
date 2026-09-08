@@ -11,8 +11,11 @@
 
      PALETA: el TRMNL en 2 bits solo imprime sólidos estos cuatro tonos:
        #000000   #555555   #AAAAAA   #FFFFFF
-     Cualquier otro gris lo simula el servidor con tramado, y en pantalla
-     se ve granulado. No meter aquí ningún gris que no sea uno de esos. */
+     Cualquier otro gris lo simula con tramado y se ve granulado, así que por
+     norma no se usa ninguno más. Con UNA excepción deliberada, el aro vacío:
+     en este panel #AAAAAA sale casi negro, y no hay ningún gris claro nativo,
+     de modo que la textura tramada de un #cccccc es la única manera de
+     conseguir algo claro de verdad. Ver el comentario del anillo. */
   html, body { margin:0; padding:0; background:#ffffff; color:#000000; }
   body { font-family: Helvetica, Arial, sans-serif; -webkit-text-size-adjust:100%; }
   .wrap { padding: 12px 16px; }
@@ -138,6 +141,9 @@ var arrancando = true;
    un 0:00 que diría, mintiendo, que ese día no se tocó. */
 var tengo = { ensayo:false, estudio:false, acordeon:false, guitarra:false };
 
+/* fecha de la última lectura aplicada, para el candado de más abajo */
+var ultimaFecha = "";
+
 /* ---------- utilidades ---------- */
 function pad2(n){ n = String(n); return n.length < 2 ? "0" + n : n; }
 
@@ -215,11 +221,18 @@ function aplicar(texto){
     for (i = 0; i < GOALS.length; i++){
       v = parseTime(partes[i+1]);
       if (v !== null){
-        datos[GOALS[i].id] = v; tengo[GOALS[i].id] = true;
+        /* Dentro del mismo día los contadores de forScore solo suben. Si llega
+           una lectura más baja es que venía de la caché de cinco minutos de
+           GitHub: se conserva la buena y no se ve retroceder el panel. */
+        if (!(partes[0] === ultimaFecha && tengo[GOALS[i].id] && v < datos[GOALS[i].id])){
+          datos[GOALS[i].id] = v; tengo[GOALS[i].id] = true;
+        }
         hubo = true; hayDatos = true;
       }
     }
   }
+
+  if (m) ultimaFecha = decode(m[1]).split(",")[0];
 
   /* citas */
   var c = /(?:^|&)cal=([\s\S]*?)(?=&(?:add|cal)=|$)/i.exec(texto);
@@ -304,20 +317,41 @@ function usarTexto(texto){
 /* Primero el archivo en crudo, que NO gasta la cuota de la API de GitHub
    (60 peticiones por hora y por IP, compartida por todos los aparatos de
    casa). La API queda solo como reserva. */
-function cargarGist(sincrono){
-  if (!GIST_ID) return;
+/* La dirección "raw" de GitHub se sirve desde una caché que guarda cada copia
+   CINCO MINUTOS (cache-control: max-age=300) y que —comprobado— IGNORA el
+   parámetro "?t=", así que el truco de la marca de tiempo no la despierta.
+   Después de ejecutar el atajo puede seguir dando los datos anteriores.
+   La API no pasa por esa caché y responde siempre lo último. */
+function porRaw(sincrono, siFalla){
   pedir(GIST_RAW + "?t=" + (new Date()).getTime(), function(txt){
     if (txt && txt.replace(/\s/g, "") !== "") { usarTexto(txt); return; }
     if (estadoRed === "ok") estadoRed = "vacio";
-    pedir("https://api.github.com/gists/" + GIST_ID + "?t=" + (new Date()).getTime(), function(t2){
-      if (!t2) return;
+    if (siFalla) siFalla();
+  }, sincrono);
+}
+function porApi(sincrono, siFalla){
+  pedir("https://api.github.com/gists/" + GIST_ID + "?t=" + (new Date()).getTime(), function(t2){
+    if (t2){
       try {
         var j = JSON.parse(t2);
         var f = j.files && j.files["datos.txt"];
-        if (f && f.content) usarTexto(f.content);
+        if (f && f.content){ usarTexto(f.content); return; }
       } catch (e) { estadoRed = "json"; }
-    }, sincrono);
+    }
+    if (siFalla) siFalla();
   }, sincrono);
+}
+
+/* La PRIMERA carga va por la API: es la que fotografía el servidor de TRMNL y
+   la que se quiere al día al segundo. Las de fondo (cada 5 min, o al despertar
+   el Kindle) van por la dirección normal, que no gasta cuota de la API —60
+   peticiones por hora y por IP, compartidas por todos los aparatos de casa—.
+   Como la primera es una sola por carga de página, el gasto es despreciable, y
+   la del TRMNL ni siquiera sale de la IP de casa. */
+function cargarGist(sincrono){
+  if (!GIST_ID) return;
+  if (sincrono) porApi(true,  function(){ porRaw(true,  null); });
+  else          porRaw(false, function(){ porApi(false, null); });
 }
 
 /* Se consulta al volver de la suspensión, al recuperar el foco o al tocar
@@ -422,12 +456,12 @@ function pintar(){
            '<div class="rbox" style="width:' + M.anillo + 'px;height:' + M.anillo + 'px">' +
              '<svg viewBox="0 0 120 120">' +
                '<g transform="rotate(-90 60 60)">' +
-                 /* El hueco no se pinta: se insinúa con dos hilos negros que
-                    marcan el canal por donde avanza el arco. En este panel
-                    cualquier gris disponible sale casi negro y el arco se
-                    perdería dentro de él. */
-                 '<circle cx="60" cy="60" r="' + (R-7) + '" fill="none" stroke="#000000" stroke-width="1"/>' +
-                 '<circle cx="60" cy="60" r="' + (R+7) + '" fill="none" stroke="#000000" stroke-width="1"/>' +
+                 /* El hueco va en #cccccc A PROPÓSITO, aunque no sea uno de los
+                    cuatro tonos nativos: al no serlo, el servidor lo trama, y
+                    esa textura de puntos se ve MÁS CLARA que cualquier gris que
+                    el panel sepa imprimir sólido (#AAAAAA sale casi negro).
+                    Es el único modo de tener un gris claro de verdad. */
+                 '<circle cx="60" cy="60" r="' + R + '" fill="none" stroke="#cccccc" stroke-width="14"/>' +
                  '<circle cx="60" cy="60" r="' + R + '" fill="none" stroke="#000000" stroke-width="14"' +
                         ' stroke-dasharray="' + C.toFixed(1) + '"' +
                         ' stroke-dashoffset="' + off.toFixed(1) + '"/>' +
