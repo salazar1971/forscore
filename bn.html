@@ -144,6 +144,9 @@ var tengo = { ensayo:false, estudio:false, acordeon:false, guitarra:false };
 /* fecha de la última lectura aplicada, para el candado de más abajo */
 var ultimaFecha = "";
 
+/* ¿la última lectura traía menos metas de las cuatro? entonces se descartó */
+var lecturaCorta = false;
+
 /* ---------- utilidades ---------- */
 function pad2(n){ n = String(n); return n.length < 2 ? "0" + n : n; }
 
@@ -218,7 +221,19 @@ function aplicar(texto){
   var m = /(?:^|&)add=([\s\S]*?)(?=&(?:add|cal)=|$)/i.exec(texto);
   if (m){
     var partes = decode(m[1]).split(",");
-    for (i = 0; i < GOALS.length; i++){
+    /* El atajo escribe SIEMPRE fecha + cuatro tiempos. Si llegan menos, es que
+       el OCR no supo leer alguna meta; y como los valores van por POSICIÓN, los
+       de detrás se habrán corrido un puesto: ensayo recibiría lo de estudio,
+       estudio lo de acordeón, y así. Pasó el 16/09/2026. Una lectura corta no
+       es una lectura incompleta, es una lectura MAL REPARTIDA, así que se tira
+       entera y se conservan los valores anteriores. */
+    if (partes.length < 1 + GOALS.length){
+      lecturaCorta = true;
+      partes = [];
+    } else {
+      lecturaCorta = false;
+    }
+    for (i = 0; i < GOALS.length && partes.length; i++){
       v = parseTime(partes[i+1]);
       if (v !== null){
         /* Dentro del mismo día los contadores de forScore solo suben. Si llega
@@ -232,7 +247,7 @@ function aplicar(texto){
     }
   }
 
-  if (m) ultimaFecha = decode(m[1]).split(",")[0];
+  if (m && !lecturaCorta) ultimaFecha = decode(m[1]).split(",")[0];
 
   /* citas */
   var c = /(?:^|&)cal=([\s\S]*?)(?=&(?:add|cal)=|$)/i.exec(texto);
@@ -426,7 +441,8 @@ function pintar(){
   document.getElementById("lbl").innerHTML = "ESTA SEMANA · S" + semanaISO(ahora);
   document.getElementById("upd").innerHTML =
     "actualizado " + pad2(ahora.getHours()) + ":" + pad2(ahora.getMinutes()) +
-    (hayDatos ? "" : " · sin datos (" + estadoRed + ")");
+    (hayDatos ? "" : " · sin datos (" + estadoRed + ")") +
+    (lecturaCorta ? " · lectura descartada" : "");
 
   /* --- días: 7 celdas iguales, el círculo centrado en cada una --- */
   document.getElementById("track").style.height = M.alto + "px";

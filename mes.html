@@ -198,6 +198,10 @@ function tragar(texto){
   const p=safeDecode(m[1]).split(",").map(s=>s.trim());
   const fecha=p[0];
   if(!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return;
+  /* Fecha + cuatro tiempos, siempre. Con menos campos el OCR se dejó una meta
+     y los valores se han corrido de posición; la lectura entera no vale y aquí
+     importa más que en ningún sitio, porque esto alimenta el histórico. */
+  if(p.length < 1+GOALS.length) return;
   const reg = lecturas[fecha] || {};
   GOALS.forEach((g,i)=>{
     const v=parseTime(p[i+1]);

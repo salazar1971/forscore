@@ -337,6 +337,8 @@ let ultimoOk=null;
    vistazo se sabe qué archivo está publicado de verdad. Si no ves "cal-mes"
    ahí, el navegador o GitHub siguen sirviendo un panel.html anterior. */
 const BUILD="cal-mes";
+/* ¿la última lectura traía menos de cuatro metas? entonces se descartó */
+let lecturaCorta=false;
 
 /* Muestra en la cabecera de qué lectura vienen los números que se ven y a qué
    hora se bajaron. Si la fecha no es la de hoy, el panel enseña algo viejo;
@@ -347,7 +349,8 @@ function sello(){
   const cuando = ultimoOk
     ? `${pad2(ultimoOk.getHours())}:${pad2(ultimoOk.getMinutes())}`
     : "sin conexión";
-  el.textContent = `${cur ? cur.date : "sin datos"} · ${cuando} · ${BUILD}`;
+  el.textContent = `${cur ? cur.date : "sin datos"} · ${cuando} · ${BUILD}` +
+                   (lecturaCorta ? " · LECTURA DESCARTADA" : "");
   el.title = cur ? JSON.stringify(cur) : "";
 }
 
@@ -558,6 +561,13 @@ function aplicarDatos(raw){
 
     if(clave==="add"){
       const p=valor.split(",").map(s=>s.trim());
+      /* El atajo escribe SIEMPRE fecha + cuatro tiempos. Si llegan menos, el OCR
+         se dejó una meta sin leer y, como los valores van por POSICIÓN, todo lo
+         de detrás se ha corrido un puesto: ensayo recibe lo de estudio, estudio
+         lo de acordeón... Pasó el 16/09/2026. No es una lectura incompleta, es
+         una lectura MAL REPARTIDA: se descarta entera. */
+      if(p.length < 1+GOALS.length){ lecturaCorta=true; return; }
+      lecturaCorta=false;
       const entry={date:p[0]||todayISO()};
       GOALS.forEach((g,k)=>{ const v=parseTime(p[k+1]); if(v!=null) entry[g.id]=v; });
 
