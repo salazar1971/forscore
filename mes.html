@@ -152,6 +152,12 @@ function sinDosPuntos(s){
   const t=s.padStart(6,"0");
   const h=+t.slice(0,2), m=+t.slice(2,4), sg=+t.slice(4,6);
   if(m>59 || sg>59) return null;
+  /* Y si salen 10 horas o más, tampoco vale. Una meta semanal tiene un
+     objetivo de 3 h; diez es imposible, y lo que hay detrás es casi siempre
+     un dos puntos que el OCR ha leído como una cifra. El 24/09/2026 mandó
+     "111258" donde ponía 1:12:58 y se pintó como 11:12, inflando la semana
+     al 124%. Con horas de una cifra la reparación es fiable; con dos, no. */
+  if(h>9) return null;
   return h*3600+m*60+sg;
 }
 function parseTime(s){
